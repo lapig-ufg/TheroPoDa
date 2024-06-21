@@ -506,6 +506,8 @@ if __name__ == '__main__':
   if os.path.exists(os.path.join(colab_folder,db + '_polygonList.txt')) is False:
     build_id_list(asset,id_field,colab_folder)
 
+  run(asset,id_field,output_name,colab_folder)
+
   input_file = output_name
   start_date_trend, end_date_trend= '2019-01-01', '2024-01-01'
   output_file_trends = f'{output_name[:-3]}_trend_analysis.pq'
