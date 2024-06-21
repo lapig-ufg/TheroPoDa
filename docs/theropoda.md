@@ -26,29 +26,29 @@ output_name = 'LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork.csv'
 
 ### 1.`getTimeSeries`
 
-  This function is responsible to get the time series of Sentinel 2 data throught Earth Engine. It needs a `geometry` object in the `ee.Feature()` formart and the choosed vector propertie ID as the `id_field`.
+This function is responsible to get the time series of Sentinel 2 data throught Earth Engine. It needs a `geometry` object in the `ee.Feature()` formart and the choosed vector propertie ID as the `id_field`.
   
-  Parameters:
-  - `geometry`: An ee.Feature() object representing the area of interest.
-  - `bestEffort`: A boolean indicating whether to use a larger pixel (10m to 30m) if the polygon area is too big (default is False).
+#### Parameters
+- `geometry`: An ee.Feature() object representing the area of interest.
+- `bestEffort`: A boolean indicating whether to use a larger pixel (10m to 30m) if the polygon area is too big (default is False).
   
-  Returns:
-  - NDVI time series data along with other information for the specified geometry.
+#### Returns
+- NDVI time series data along with other information for the specified geometry.
 
 ### 2.`build_time_series`
 
-  Builds and writes NDVI time series data for a target vector asset, processing one polygon at a time.
+Builds and writes NDVI time series data for a target vector asset, processing one polygon at a time.
 
-  Parameters:
-  - `index`: Index of the object being processed.
-  - `obj`: Object ID for which the time series is being generated.
-  - `id_field`: Field name representing the ID in the vector asset.
-  - `outfile`: Output file path to write the time series data.
-  - `asset`: Earth Engine vector asset.
-  - `bestEffort`: A boolean indicating whether to use a larger scale if needed (default is False).
-  
-  Returns:
-  - True if processing is successful, None if the polygon area is too small, False if an error occurs during processing and restart the process using the bestEffort approach.
+#### Parameters
+- `index`: Index of the object being processed.
+- `obj`: Object ID for which the time series is being generated.
+- `id_field`: Field name representing the ID in the vector asset.
+- `outfile`: Output file path to write the time series data.
+- `asset`: Earth Engine vector asset.
+- `bestEffort`: A boolean indicating whether to use a larger scale if needed (default is False).
+
+#### Returns
+- True if processing is successful, None if the polygon area is too small, False if an error occurs during processing and restart the process using the bestEffort approach.
 
 ### 3.`build_time_series_check`
 
