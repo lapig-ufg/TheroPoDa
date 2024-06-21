@@ -37,49 +37,49 @@ output_name = 'LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork.csv'
 
 ### 2.`build_time_series`
 
-Builds and writes NDVI time series data for a target vector asset, processing one polygon at a time.
+  Builds and writes NDVI time series data for a target vector asset, processing one polygon at a time.
 
-Parameters:
-- `index`: Index of the object being processed.
-- `obj`: Object ID for which the time series is being generated.
-- `id_field`: Field name representing the ID in the vector asset.
-- `outfile`: Output file path to write the time series data.
-- `asset`: Earth Engine vector asset.
-- `bestEffort`: A boolean indicating whether to use a larger scale if needed (default is False).
-
-Returns:
-- True if processing is successful, None if the polygon area is too small, False if an error occurs during processing and restart the process using the bestEffort approach.
+  Parameters:
+  - `index`: Index of the object being processed.
+  - `obj`: Object ID for which the time series is being generated.
+  - `id_field`: Field name representing the ID in the vector asset.
+  - `outfile`: Output file path to write the time series data.
+  - `asset`: Earth Engine vector asset.
+  - `bestEffort`: A boolean indicating whether to use a larger scale if needed (default is False).
+  
+  Returns:
+  - True if processing is successful, None if the polygon area is too small, False if an error occurs during processing and restart the process using the bestEffort approach.
 
 ### 3.`build_time_series_check`
 
-Checks the consistency of the NDVI time series library and handles errors during processing.
+  Checks the consistency of the NDVI time series library and handles errors during processing.
 
-Parameters:
-- `index`: Index of the object being processed.
-- `obj`: Object ID for which the time series is being checked.
-- `id_field`: Field name representing the ID in the vector asset.
-- `outfile`: Output file path where time series data is stored.
-- `asset`: Earth Engine vector asset.
-- `checker`: A boolean indicating whether to check if the polygon has been processed before (default is False).
-
-Returns:
-- A dictionary containing information about errors and processing time.
+  Parameters:
+  - `index`: Index of the object being processed.
+  - `obj`: Object ID for which the time series is being checked.
+  - `id_field`: Field name representing the ID in the vector asset.
+  - `outfile`: Output file path where time series data is stored.
+  - `asset`: Earth Engine vector asset.
+  - `checker`: A boolean indicating whether to check if the polygon has been processed before (default is False).
+  
+  Returns:
+  - A dictionary containing information about errors and processing time.
 
 ### 4.`build_id_list`
 
-Builds and writes a text file containing each Polygon ID used to extract the time series.
-
-Parameters:
-- `asset`: Earth Engine vector asset.
-- `id_field`: Field name representing the ID in the vector asset.
-- `colab_folder`: Path of the folder where the text file will be saved.
+  Builds and writes a text file containing each Polygon ID used to extract the time series.
+  
+  Parameters:
+  - `asset`: Earth Engine vector asset.
+  - `id_field`: Field name representing the ID in the vector asset.
+  - `colab_folder`: Path of the folder where the text file will be saved.
 
 ### 5.`run`
 
-Manages the overall workflow by catching argument information and initiating the process of extracting NDVI time series data for specified polygonal areas.
-
-Parameters:
-- `asset`: Earth Engine vector asset.
-- `id_field`: Field name representing the ID in the vector asset.
-- `output_name`: Name of the output file.
-- `colab_folder`: Path of the folder where the output file will be saved.
+  Manages the overall workflow by catching argument information and initiating the process of extracting NDVI time series data for specified polygonal areas.
+  
+  Parameters:
+  - `asset`: Earth Engine vector asset.
+  - `id_field`: Field name representing the ID in the vector asset.
+  - `output_name`: Name of the output file.
+  - `colab_folder`: Path of the folder where the output file will be saved.
