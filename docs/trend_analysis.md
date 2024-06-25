@@ -1,78 +1,56 @@
 
 # Trend Analysis Module
 
-This module includes functionalities for trend analysis.
+This module includes functionalities related to `trend_analysis.py` code.
 
 ## Overview
 
-The `trend_analysis` module provides functions to analyze trends in time series data.
+The `trend_analysis` module provides functions to gap filling and analyze trends in time series data.
 
 ## Functions
 
-### `calculate_moving_average(data, window_size)`
+### 1.`extract_ts`
 
-Calculates the moving average of a time series.
-
-#### Parameters
-
-- `data` (list of float): The time series data.
-- `window_size` (int): The window size for the moving average calculation.
-
-#### Returns
-
-- `list of float`: The time series of moving averages.
-
-#### Example Usage
-
-```python
-from trend_analysis import calculate_moving_average
-
-data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-moving_average = calculate_moving_average(data, window_size=3)
-print(moving_average)  # Output: [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
-```
-
-### `detect_trend(data)`
-
-Detects the trend in a time series.
+Extracts time series data from the DataFrame for 5-day intervals.
 
 #### Parameters
+- `df`: DataFrame containing the data.
+- `dt_5days`: List of 5-day intervals.
 
-- `data` (list of float): The time series data.
+Returns:
+- Time series data and corresponding dates.
 
-#### Returns
+### 2.`gapfill`
 
-- `str`: The detected trend ('upward', 'downward', 'stable').
-
-#### Example Usage
-
-```python
-from trend_analysis import detect_trend
-
-data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-trend = detect_trend(data)
-print(trend)  # Output: upward
-```
-
-### `forecast(data, periods)`
-
-Forecasts future values of a time series.
+Fills gaps in the time series data.
 
 #### Parameters
+- `ts`: Time series data.
+- `dates`: List of dates corresponding to the time series data.
+- `season_size`: Size of the seasonal period.
 
-- `data` (list of float): The time series data.
-- `periods` (int): The number of periods to forecast.
+Returns:
+- Filled time series data and updated dates.
 
-#### Returns
+### 3.`sm_trend`
 
-- `list of float`: The forecasted values for the next periods.
+Applies seasonal decomposition and trend smoothing to the time series data.
 
-#### Example Usage
+#### Parameters
+- `ts`: Time series data.
+- `season_size`: Size of the seasonal period.
+- `seasonal_smooth`: Size of the seasonal smoothing.
 
-```python
-from trend_analysis import forecast
+Returns:
+- Trend analysis results and column names.
 
-data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-future_values = forecast(data, periods=3)
-print(future_values)  # Output: [11, 12, 13]
-```
+### 4.`run`
+
+Executes the trend analysis workflow for a given polygon ID.
+
+#### Parameters
+- `input_file`: Input database file.
+- `id_pol`: ID of the polygon.
+- `dt_5days`: List of 5-day intervals.
+- `season_size`: Size of the seasonal period.
+- `output_file`: Output file path.
