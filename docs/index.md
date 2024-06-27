@@ -25,7 +25,7 @@
 - Scikit-learn
 - Joblib
 - Psutil
-- [scikit-map](https://pages.github.com/)
+- [scikit-map](https://github.com/openlandmap/scikit-map)
 
 ### How to use
 
