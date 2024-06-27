@@ -18,7 +18,7 @@
 ### Version
 - 1.1.0
 
-### Requirements
+### Requirements (installation order from top to bottom)
 - Python 3.10
 - GDAL
 - Rasterio 
