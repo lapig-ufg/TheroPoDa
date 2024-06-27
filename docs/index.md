@@ -29,7 +29,7 @@
 
 ### How to use
 
-- At this version of TheroPoDa (1.1.0), you could extract a series of NDVI data from Sentinel 2 for a Feature Collection of polygons simplily by adjusting some variables at the end of code:
+- In this version of TheroPoDa (1.1.0), you could extract a series of median NDVI from Sentinel 2 for a Feature Collection of polygons simplily by adjusting some variables at the end of code:
 
 | variable      | usage                                               | example  |
 |:-------------:|:--------------------------------------------------: |:---------|
