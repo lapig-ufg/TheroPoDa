@@ -16,7 +16,7 @@
 ### Version
 - 1.1.0
 
-### Requirements
+### Requirements (installation order from top to bottom)
 - Python 3.10
 - GDAL
 - Rasterio 
@@ -36,6 +36,8 @@
 | asset         | Choosed Earth Engine Vector Asset                   | users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m |
 | id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
 | output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork.csv |
+
+If you don't know how to upload your vector data in Earth Engine, you can follow the tutotial [clicking this link.](https://developers.google.com/earth-engine/guides/table_upload)
 
 ### Roadmap
 
