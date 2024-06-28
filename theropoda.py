@@ -20,6 +20,18 @@ Toolkit created to extract Time Series information from Sentinel 2 stored in Ear
 
 ### Import main libraries
 
+### Requirements (installation order from top to bottom)
+- Python 3.10
+- GDAL
+- Rasterio 
+- Pandas
+- Geopandas
+- Scikit-learn
+- Joblib
+- Psutil
+- Earthengine-api - https://developers.google.com/earth-engine/guides/python_install
+- scikit-map - https://github.com/openlandmap/scikit-map
+
 Run the following cell to import the main API's into your session.
 """
 
