@@ -492,9 +492,9 @@ if __name__ == '__main__':
 
   parser = argparse.ArgumentParser(description='Toolkit created to extract Time Series information from Sentinel 2 stored in Earth Engine, perform gap filling and trend analysis image.')
     
-  parser.add_argument('--asset', required=True, help='The asset name or path')
-  parser.add_argument('--id_field', required=True, help='The ID field name')
-  parser.add_argument('--output_name', required=True, help='The output file name')
+  parser.add_argument('--asset', type=str, required=True, help='The asset name or path')
+  parser.add_argument('--id_field', type=str, required=True, help='The ID field name')
+  parser.add_argument('--output_name', type=str, required=True, help='The output file name')
 
   args = parser.parse_args()
 
