@@ -25,18 +25,18 @@
 - Scikit-learn
 - Joblib
 - Psutil
-- Earthengine-api
+- [Earthengine-api](https://developers.google.com/earth-engine/guides/python_install)
 - [scikit-map](https://github.com/openlandmap/scikit-map)
 
 ### How to use
 
-- In this version of TheroPoDa (1.1.0), you could extract a series of median NDVI from Sentinel 2 for a Feature Collection of polygons simplily by adjusting some variables at the end of code:
+- In this version of TheroPoDa (1.1.0), you could extract a series of median NDVI from Sentinel 2 for a Feature Collection of polygons simplily by passing arguments to the python code exemplified below:
 
-| variable      | usage                                               | example  |
+| argument      | usage                                               | example  |
 |:-------------:|:--------------------------------------------------: |:---------|
-| asset         | Choosed Earth Engine Vector Asset                   | users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m |
-| id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
-| output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork |
+| --asset         | Choosed Earth Engine Vector Asset                   | users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m |
+| --id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
+| --output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork |
 
 ```bash
 python theropoda.py --asset users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m --id_field ID_POINTS --output_name LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork
