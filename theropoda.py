@@ -490,15 +490,23 @@ def run(asset,id_field,output_name,colab_folder):
 
 if __name__ == '__main__':
 
-  asset = 'users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m' #Earth Engine Vector Asset
-  id_field = 'ID_POINTS' #Vector collumn used as ID (use unique identifiers!)
+  parser = argparse.ArgumentParser(description='Toolkit created to extract Time Series information from Sentinel 2 stored in Earth Engine, perform gap filling and trend analysis image.')
+    
+  parser.add_argument('--asset', required=True, help='The asset name or path')
+  parser.add_argument('--id_field', required=True, help='The ID field name')
+  parser.add_argument('--output_name', required=True, help='The output file name')
+
+  args = parser.parse_args()
+
+  asset = args.asset #'users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m' #Earth Engine Vector Asset
+  id_field = args.id_field #'ID_POINTS' #Vector collumn used as ID (use unique identifiers!)
 	
   db = asset.split('/')[-1]
   
   db_name = db + '.db'  
   
   colab_folder = ''
-  output_name = db_name
+  output_name = args.output_name #db_name
 
   conn = sqlite3.connect(db_name)
   conn.close()
