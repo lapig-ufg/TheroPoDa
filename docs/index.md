@@ -25,6 +25,7 @@
 - Scikit-learn
 - Joblib
 - Psutil
+- Earthengine-api
 - [scikit-map](https://github.com/openlandmap/scikit-map)
 
 ### How to use
