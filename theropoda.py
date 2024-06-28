@@ -181,11 +181,11 @@ def getTimeSeries(geometry,bestEffort=False):
       .set('satelite',img.get('satelite')) #Sapacraft plataform name (i.e. Sentinel 2A or 2B)
       .set('MGRS_TILE',img.get('MGRS_TILE')) #Reference tile grid
       .set('AREA_HA',ee.Feature(geometry).area(1).divide(10000)) #Choosed polygon ID Field
-      .set('NDVI_mean',ee.Number(ee.Dictionary(series).get('NDVI_mean'))) #NDVI pixel average for the polygon
+      #.set('NDVI_mean',ee.Number(ee.Dictionary(series).get('NDVI_mean'))) #NDVI pixel average for the polygon
       .set('NDVI_median',ee.Number(ee.Dictionary(series).get('NDVI_median'))) #NDVI pixel median for the polygon
-      .set('NDVI_min',ee.Number(ee.Dictionary(series).get('NDVI_min'))) #NDVI pixel minimum value for the polygon
-      .set('NDVI_max',ee.Number(ee.Dictionary(series).get('NDVI_max'))) #NDVI pixel maximum value for the polygon
-      .set('NDVI_stdDev',ee.Number(ee.Dictionary(series).get('NDVI_stdDev'))) #NDVI pixel Standard Deviation for the polygon
+      #.set('NDVI_min',ee.Number(ee.Dictionary(series).get('NDVI_min'))) #NDVI pixel minimum value for the polygon
+      #.set('NDVI_max',ee.Number(ee.Dictionary(series).get('NDVI_max'))) #NDVI pixel maximum value for the polygon
+      #.set('NDVI_stdDev',ee.Number(ee.Dictionary(series).get('NDVI_stdDev'))) #NDVI pixel Standard Deviation for the polygon
       .set('Pixel_Count',ee.Number(ee.Dictionary(series).get('NDVI_count'))) #Number of pixels cloudless and shadowless used for estimatives
       .set('Total_Pixels',ee.Number(ee.Dictionary(series).get('full_count'))) #Total number of pixels inside the polygon
       .set('Pixel_Size',pixel_size) #Size of the pixel used
