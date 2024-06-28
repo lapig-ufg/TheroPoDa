@@ -38,11 +38,12 @@
 | --id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
 | --output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork |
 
+If you don't know how to upload your vector data in Earth Engine, you can follow the tutotial [clicking this link.](https://developers.google.com/earth-engine/guides/table_upload)
+
+#### Command line example
 ```bash
 python theropoda.py --asset users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m --id_field ID_POINTS --output_name LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork
 ```
-
-If you don't know how to upload your vector data in Earth Engine, you can follow the tutotial [clicking this link.](https://developers.google.com/earth-engine/guides/table_upload)
 
 ### Roadmap
 
