@@ -563,5 +563,5 @@ if __name__ == '__main__':
   
   df2conv = pd.read_parquet(output_file_trends)
   df2conv.to_parquet(f'{output_name[:-3]}_trend_analysis.parquet')
-  df2conv= None
-  os.remove(output_file_trends)
+  df2conv = None
+  shutil.rmtree(df2conv) 
