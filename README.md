@@ -39,6 +39,9 @@
 | --id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
 | --output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork |
 
+
+#### Command line example
+
 ```bash
 python theropoda.py --asset users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m --id_field ID_POINTS --output_name LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork
 ```
