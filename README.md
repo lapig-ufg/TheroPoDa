@@ -32,8 +32,8 @@
 
 - In this version of TheroPoDa (1.1.0), you could extract a series of median NDVI from Sentinel 2 for a Feature Collection of polygons simplily by passing arguments to the python code exemplified below:
 
-| argument      | usage                                               | example  |
-|:-------------:|:--------------------------------------------------: |:---------|
+| argument        | usage                                               | example  |
+|:---------------:|:--------------------------------------------------: |:---------|
 | --asset         | Choosed Earth Engine Vector Asset                   | users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m |
 | --id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
 | --output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork |
