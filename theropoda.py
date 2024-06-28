@@ -53,9 +53,7 @@ from skmap.misc import date_range, ttprint
 from trend_analysis import run as trend_run
 from skmap import parallel
 import argparse
-import pyarrow as pa
-import pyarrow.parquet as pq
-
+import shutil
 
 logger.add("log_do_.log", rotation="500 MB")
 
