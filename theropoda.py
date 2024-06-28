@@ -53,6 +53,8 @@ from skmap.misc import date_range, ttprint
 from trend_analysis import run as trend_run
 from skmap import parallel
 import argparse
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 logger.add("log_do_.log", rotation="500 MB")
@@ -558,3 +560,8 @@ if __name__ == '__main__':
   ttprint(f"Starting trend analysis on {len(args)} polygons")
   for id_pol in parallel.job(trend_run, args, joblib_args={'backend': 'multiprocessing'}):
     continue
+  
+  df2conv = pd.read_parquet(output_file_trends)
+  df2conv.to_parquet(f'{output_name[:-3]}_trend_analysis.parquet')
+  df2conv= None
+  os.remove(output_file_trends)
