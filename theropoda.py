@@ -380,7 +380,7 @@ Function responsible to write a text file contaning each Polygon ID used to extr
 """
 
 #Builds and writes the Polygon ID list
-def build_id_list(asset,id_field,colab_folder):
+def build_id_list(asset,id_field,colab_folder,db):
   """
   Builds and writes a text file containing each Polygon ID used to extract the time series.
 
@@ -420,7 +420,7 @@ def build_id_list(asset,id_field,colab_folder):
 Function responsible to catch argument information and start run the process.
 """
 
-def run(asset,id_field,output_name,colab_folder):
+def run(asset,id_field,output_name,colab_folder,db):
   """
   Manages the overall workflow by catching argument information and initiating the process of extracting NDVI time series data for specified polygonal areas.
 
