@@ -24,29 +24,28 @@ if __name__ == '__main__':
 	
   db = asset.split('/')[-1]
   
-  db_name = db + '.db'  
+  #db_name = args.output_name +'.db' #db + '.db'  
   
   colab_folder = ''
   output_name = args.output_name #db_name
 
-  conn = sqlite3.connect(db_name)
+  conn = sqlite3.connect(output_name+'.db')
   conn.close()
 
   #Check if polygon list file exists
   if os.path.exists(os.path.join(colab_folder,db + '_polygonList.txt')) is False:
-    build_id_list(asset,id_field,colab_folder,db)
+    build_id_list(asset,id_field,colab_folder,output_name)
 
   theropoda_run(asset,id_field,output_name,colab_folder,db)
 
-  input_file = output_name
   start_date_trend, end_date_trend= '2019-01-01', '2024-01-01'
-  output_file_trends = f'{output_name[:-3]}_trend_analysis.pq'
+  output_file_trends = f'{output_name}_trend_analysis.pq'
 
   ################################
   ## SQLITE access
   ################################
   ttprint(f"Preparing {output_name}")
-  con = sqlite3.connect(output_name)
+  con = sqlite3.connect(output_name+'.db')
   cur = con.cursor()
   res = cur.execute(f"CREATE INDEX IF NOT EXISTS restoration_id_pol ON restoration ({id_field})")
   con.commit()
@@ -62,13 +61,13 @@ if __name__ == '__main__':
   dt_5days = list(date_range(start_date_trend, end_date_trend, date_unit='days', date_step=5, ignore_29feb=True))
   season_size = int(len(dt_5days) / 5)
 
-  args = [ (output_name, r[f'{id_field}'], dt_5days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
+  args = [ (output_name+'.db', r[f'{id_field}'], dt_5days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
   
   ttprint(f"Starting trend analysis on {len(args)} polygons")
   for id_pol in parallel.job(trend_run, args, joblib_args={'backend': 'multiprocessing'}):
     continue
   
   df2conv = pd.read_parquet(output_file_trends)
-  df2conv.to_parquet(f'{output_name[:-3]}_trend_analysis.parquet')
+  df2conv.to_parquet(f'{output_name}_trend_analysis.parquet')
 
   shutil.rmtree(output_file_trends)  
