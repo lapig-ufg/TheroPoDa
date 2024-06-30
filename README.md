@@ -1,7 +1,7 @@
 ![Vinícius Mesquita / DALEE - theropod, jurassic landscape, digital art, hight quality](Logo.jpg)
 
 - ${\color{red}T} im {\color{red}e}\ Se {\color{red}r} ies\ Extracti {\color{red}o} n\ for\ {\color{red}Po} lygonal\ {\color{red}Da} ta$
-===========
+  ===========
 [![GitLab license](./docs/mit.svg)](./LICENSE)
 
 ### Name
