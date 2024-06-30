@@ -34,9 +34,9 @@ if __name__ == '__main__':
 
   #Check if polygon list file exists
   if os.path.exists(os.path.join(colab_folder,db + '_polygonList.txt')) is False:
-    build_id_list(asset,id_field,colab_folder)
+    build_id_list(asset,id_field,colab_folder,db)
 
-  theropoda_run(asset,id_field,output_name,colab_folder)
+  theropoda_run(asset,id_field,output_name,colab_folder,db)
 
   input_file = output_name
   start_date_trend, end_date_trend= '2019-01-01', '2024-01-01'
