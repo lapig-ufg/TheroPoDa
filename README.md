@@ -8,7 +8,7 @@
 - T(h)eroPoDa + - Time Series Extraction for Polygonal Data and Trend Analysis ⬛
 
 ### Description
-- Toolkit created to extract Time Series information from Sentinel 2 🛰 data stored in Earth Engine, gap filling and trend analysis [![image](https://user-images.githubusercontent.com/13785909/209228496-9fe31adc-a7cb-47c3-b476-64d82541f139.png)](https://earthengine.google.com/)
+- Toolkit created to extract median NDVI Time Series from Sentinel 2 data 🛰 stored in Google Earth Engine, perform gap filling and trend analysis [![image](https://user-images.githubusercontent.com/13785909/209228496-9fe31adc-a7cb-47c3-b476-64d82541f139.png)](https://earthengine.google.com/)
 
 ### Author
 - Vinícius Vieira Mesquita - vinicius.mesquita@ufg.br (Main Theropoda)
