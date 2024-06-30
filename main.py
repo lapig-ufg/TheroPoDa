@@ -71,4 +71,4 @@ if __name__ == '__main__':
   df2conv = pd.read_parquet(output_file_trends)
   df2conv.to_parquet(f'{output_name[:-3]}_trend_analysis.parquet')
 
-  shutil.rmtree(df2conv)  
+  shutil.rmtree(output_file_trends)  
