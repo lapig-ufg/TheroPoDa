@@ -2,7 +2,7 @@
 
 - ${\color{red}T} im {\color{red}e}\ Se {\color{red}r} ies\ Extracti {\color{red}o} n\ for\ {\color{red}Po} lygonal\ {\color{red}Da} ta$
 ===========
-[![GitLab license](./docs/img/mit.svg)](./LICENSE)
+[![GitLab license](./docs/mit.svg)](./LICENSE)
 
 ### Name
 - T(h)eroPoDa + - Time Series Extraction for Polygonal Data and Trend Analysis ⬛
