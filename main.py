@@ -33,7 +33,7 @@ if __name__ == '__main__':
   conn.close()
 
   #Check if polygon list file exists
-  if os.path.exists(os.path.join(colab_folder,db + '_polygonList.txt')) is False:
+  if os.path.isfile(os.path.join(colab_folder,output_name + '_polygonList.txt')) is False:
     build_id_list(asset,id_field,colab_folder,output_name)
 
   theropoda_run(asset,id_field,output_name,colab_folder,db)
