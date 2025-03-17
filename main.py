@@ -1,4 +1,3 @@
-#TheroPoDa is HUNGRY, she gonna "eat" all the data of EE and store it in her .db "belly" (SQLite file recognized by the .db extension)"
 from theropoda import run as theropoda_run
 from theropoda import build_id_list
 from trend_analysis import run as trend_run
@@ -14,13 +13,9 @@ if __name__ == '__main__':
 
   parser = argparse.ArgumentParser(description='Toolkit created to extract Time Series information from Sentinel 2 stored in Earth Engine, perform gap filling and trend analysis image.')
     
-  parser.add_argument('-a','--asset', type=str, required=True, help='The asset name or path')
-  parser.add_argument('-id','--id_field', type=str, required=True, help='The ID field name')
-  parser.add_argument('-c','--collection', type=str, required=True, help='The used satellite collection (e.g. Landsat, Sentinel)')
-  parser.add_argument('-o','--output_name', type=str, required=True, help='The output file name')
-  parser.add_argument('-start','--start_date', type=str, required=True, help='Start date baseline for the time series decomposition (i.e. 2019-01-01)')
-  parser.add_argument('-end','--end_date', type=str, required=True, help='End date baseline for the time series decomposition (i.e. 2025-01-01)')
-  parser.add_argument('-w','--window', type=str, required=False, help='Size of the time series standadization window (Default is 15 - average of 15 days)')
+  parser.add_argument('--asset', type=str, required=True, help='The asset name or path')
+  parser.add_argument('--id_field', type=str, required=True, help='The ID field name')
+  parser.add_argument('--output_name', type=str, required=True, help='The output file name')
 
   args = parser.parse_args()
 
@@ -41,9 +36,9 @@ if __name__ == '__main__':
   if os.path.isfile(os.path.join(colab_folder,output_name + '_polygonList.txt')) is False:
     build_id_list(asset,id_field,colab_folder,output_name)
 
-  theropoda_run(asset,id_field,output_name,colab_folder,db,args.collection)
+  theropoda_run(asset,id_field,output_name,colab_folder,db)
 
-  start_date_trend, end_date_trend= args.start_date, args.end_date
+  start_date_trend, end_date_trend= '2019-01-01', '2024-01-01'
   output_file_trends = f'{output_name}_trend_analysis.pq'
 
   ################################
@@ -63,20 +58,10 @@ if __name__ == '__main__':
   idx_sql = f"SELECT {id_field}, MIN(date) min_date, MAX(date) max_date, COUNT(*) count FROM restoration GROUP BY 1 ORDER BY 1"
   idx =  pd.read_sql_query(idx_sql, con=con)
   
-  try:
-    window = int(parser.window)
-  except:
-    if args.collection == 'Sentinel':
-      window = 15 #days
-    elif args.collection == 'Landsat':
-      window = 16 #days
-    else:
-      window = 15 #days
+  dt_5days = list(date_range(start_date_trend, end_date_trend, date_unit='days', date_step=5, ignore_29feb=True))
+  season_size = int(len(dt_5days) / 5)
 
-  dt_days = list(date_range(start_date_trend, end_date_trend, date_unit='days', date_step=window, ignore_29feb=True))
-  season_size = int(len(dt_days) / window)
-
-  args = [ (output_name+'.db', r[f'{id_field}'], dt_days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
+  args = [ (output_name+'.db', r[f'{id_field}'], dt_5days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
   
   ttprint(f"Starting trend analysis on {len(args)} polygons")
   for id_pol in parallel.job(trend_run, args, joblib_args={'backend': 'multiprocessing'}):
