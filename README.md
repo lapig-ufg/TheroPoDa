@@ -34,7 +34,7 @@
 ### How to use
 
 - In this version of TheroPoDa (v2), you could extract a series of median NDVI from Sentinel 2, Landsat 8 and 9 for a Feature Collection of polygons simplily by passing arguments to the python code exemplified below.
-- Also, a trend analysis is started considering a time-series gap-filling (apllied to observations with less than 70% of usable pixels), a time series decomposition and a ordinary least squeare regression over series trend.
+- Also, a trend analysis is performed considering a time-series gap-filling (apllied to observations with less than 70% of usable pixels), a time series decomposition and a ordinary least square regression over series trend.
 
 ## ${\color{red} T(h)eroPoDa\ is\ HUNGRY\, she\ gonna\ "eat"\ all\ the\ data\ of\ EE\ and\ store\ it\ in\ her\ .db\ "belly"\ (SQLite\ file\ recognized\ by\ the\ .db\ extension)\ \}$
 
