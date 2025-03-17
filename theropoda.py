@@ -95,6 +95,7 @@ Run the `ee.Authenticate` function to authenticate your access to Earth Engine s
 # Initialize the library.
 ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
 
+   
 """### Get the NDVI Time Series from Earth Engine
 
 Function responsible to get the time series of Sentinel 2 data throught Earth Engine.
@@ -104,7 +105,7 @@ This function needs a `geometry` object in the `ee.Feature()` formart and the ch
 
 """
 #Returns a NDVI time series (and other informations) by a target polygon
-def getTimeSeries(geometry,bestEffort=False):
+def getTimeSeries(geometry,collection,bestEffort=False):
   
   """
   Retrieves NDVI time series data from Sentinel 2 imagery for a specified geometry.
@@ -117,6 +118,30 @@ def getTimeSeries(geometry,bestEffort=False):
   - NDVI time series data along with other information for the specified geometry.
   """
   
+  def select_collection(collection):
+    if collection == 'Landsat':
+      
+      l8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+      l9 = ee.ImageCollection('LANDSAT/LC09/C02/T1_L2');
+      return (l8.merge(l9)
+      .filterBounds(ee.Feature(geometry).geometry())
+      #.filterDate('2013-01-01','2025-01-01')
+      .map(mask_and_ndvi_ls))
+      
+    if collection == 'Sentinel':
+      #Calls the Sentinel 2 data collection, filter the images based in the polygon location, masks cloud/shadow and calculates NDVI
+      s2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+        .filterBounds(geometry.geometry()))
+
+      csPlus = (ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED')
+            .filterBounds(geometry.geometry()))
+
+      csPlusBands = csPlus.first().bandNames();
+      
+      return (s2.linkCollection(csPlus, csPlusBands)
+          .map(maskEdges)
+          .map(mask_and_ndvi_s2))
+    
   #Mask possible edges which can occur on Sentinel 2 data
   def maskEdges(img):
     """
@@ -129,9 +154,36 @@ def getTimeSeries(geometry,bestEffort=False):
     - Masked image.
     """
     return img.updateMask(img.select('B8A').mask().updateMask(img.select('B9').mask()));
+  
+  #Creates a Cloud and Shadow mask for the input Landsat image
+  def mask_and_ndvi_ls(img):
+    """
+    Creates a cloud and shadow mask for the input Sentinel 2 image and calculates NDVI.
+
+    Parameters:
+    - img: Input image.
+
+    Returns:
+    - Image with cloud and shadow mask and NDVI calculated.
+    """
+
+    #Get spacecraft plataform name
+    satName = ee.String(img.get('SPACECRAFT_ID'))
+
+    mask_exp = "(b('QA_PIXEL') == 21824 || b('QA_PIXEL') == 21952)"
+    cloud_mask = img.expression(mask_exp).add(img.gt(0)).select([0],['QA']);
+    
+    red_nir_selection = img.select(['SR_B5','SR_B4'],['RED','NIR']).multiply(0.0000275).add(-0.2)
+    
+    #Calculate NDVI (Normalized Difference Vegetation Index) based on Bands 4 (Red) and 8 (Near Infrared)
+    ndvi = red_nir_selection.updateMask(cloud_mask).normalizedDifference(['RED','NIR']).select([0],['NDVI'])
+
+    return (img.addBands([ndvi,ee.Image.constant(1).rename(['full'])], None, True)
+      .set({'system:time_start':img.get('system:time_start'),'satelite':satName}))
+      #.copyProperties(img))
 
   #Creates a Cloud and Shadow mask for the input Sentinel 2 image
-  def mask_and_ndvi(img):
+  def mask_and_ndvi_s2(img):
     """
     Creates a cloud and shadow mask for the input Sentinel 2 image and calculates NDVI.
 
@@ -155,6 +207,7 @@ def getTimeSeries(geometry,bestEffort=False):
 
     return (img.addBands([ndvi,ee.Image.constant(1).rename(['full'])], None, True)
       .set({'system:time_start':img.get('system:time_start'),'satelite':satName}))
+      
 
   #Extracts and standardizes the output NDVI values and etc. by each image
   def reduceData(img):
@@ -182,41 +235,67 @@ def getTimeSeries(geometry,bestEffort=False):
       )
 
     #Defines the zonal reducers to use
-    reducers = (ee.Reducer.mean()
-        .combine(**{'reducer2': ee.Reducer.stdDev(),'sharedInputs':True,})
-        .combine(**{'reducer2': ee.Reducer.median(),'sharedInputs':True,})
-        .combine(**{'reducer2': ee.Reducer.min(),'sharedInputs':True,})
-        .combine(**{'reducer2': ee.Reducer.max(),'sharedInputs':True,})
+    reducers = (ee.Reducer.median()
+        # .combine(**{'reducer2': ee.Reducer.stdDev(),'sharedInputs':True,})
+        # .combine(**{'reducer2': ee.Reducer.median(),'sharedInputs':True,})
+        # .combine(**{'reducer2': ee.Reducer.min(),'sharedInputs':True,})
+        # .combine(**{'reducer2': ee.Reducer.max(),'sharedInputs':True,})
         .combine(**{'reducer2': ee.Reducer.count(),'sharedInputs':True}))
-
-    pixel_size = 10
-
-    #If polygon area is to big and causes memory limit error, bestEffort is used
-    #bestEffort - If the polygon would contain too many pixels at the given scale, compute and use a larger scale which would allow the operation to succeed.
-
-    if bestEffort == False:
-      series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
-
-    else:
+    
+    if collection == 'Landsat':
+      
       pixel_size = 30
-      series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+      
+      series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), 30, None, None,False,1e13,16)
+      
+      return (ee.Feature(geometry)
+        .set('id',ee.String(img.id())) #Image ID
+        .set('date',orgDate) #Date
+        .set('satelite',img.get('satelite')) #Sapacraft plataform name (i.e. Sentinel 2A or 2B)
+        #.set('MGRS_TILE',img.get('MGRS_TILE')) #Reference tile grid
+        .set('WRS_PATH',img.get('WRS_PATH')) #Reference tile grid
+        .set('WRS_ROW',img.get('WRS_ROW')) #Reference tile grid
+        .set('AREA_HA',ee.Feature(geometry).area(1).divide(10000)) #Choosed polygon ID Field
+        #.set('NDVI_mean',ee.Number(ee.Dictionary(series).get('NDVI_mean'))) #NDVI pixel average for the polygon
+        .set('NDVI_median',ee.Number(ee.Dictionary(series).get('NDVI_median'))) #NDVI pixel median for the polygon
+        #.set('NDVI_min',ee.Number(ee.Dictionary(series).get('NDVI_min'))) #NDVI pixel minimum value for the polygon
+        #.set('NDVI_max',ee.Number(ee.Dictionary(series).get('NDVI_max'))) #NDVI pixel maximum value for the polygon
+        #.set('NDVI_stdDev',ee.Number(ee.Dictionary(series).get('NDVI_stdDev'))) #NDVI pixel Standard Deviation for the polygon
+        .set('Pixel_Count',ee.Number(ee.Dictionary(series).get('NDVI_count'))) #Number of pixels cloudless and shadowless used for estimatives
+        .set('Total_Pixels',ee.Number(ee.Dictionary(series).get('full_count'))) #Total number of pixels inside the polygon
+        .set('Pixel_Size',pixel_size) #Size of the pixel used
+      )
+    
+    if collection == 'Sentinel':
+      
+      pixel_size = 10
 
-    #Return defined information for the choosed polygon
-    return (ee.Feature(geometry)
-      .set('id',ee.String(img.id())) #Image ID
-      .set('date',orgDate) #Date
-      .set('satelite',img.get('satelite')) #Sapacraft plataform name (i.e. Sentinel 2A or 2B)
-      .set('MGRS_TILE',img.get('MGRS_TILE')) #Reference tile grid
-      .set('AREA_HA',ee.Feature(geometry).area(1).divide(10000)) #Choosed polygon ID Field
-      .set('NDVI_mean',ee.Number(ee.Dictionary(series).get('NDVI_mean'))) #NDVI pixel average for the polygon
-      .set('NDVI_median',ee.Number(ee.Dictionary(series).get('NDVI_median'))) #NDVI pixel median for the polygon
-      .set('NDVI_min',ee.Number(ee.Dictionary(series).get('NDVI_min'))) #NDVI pixel minimum value for the polygon
-      .set('NDVI_max',ee.Number(ee.Dictionary(series).get('NDVI_max'))) #NDVI pixel maximum value for the polygon
-      .set('NDVI_stdDev',ee.Number(ee.Dictionary(series).get('NDVI_stdDev'))) #NDVI pixel Standard Deviation for the polygon
-      .set('Pixel_Count',ee.Number(ee.Dictionary(series).get('NDVI_count'))) #Number of pixels cloudless and shadowless used for estimatives
-      .set('Total_Pixels',ee.Number(ee.Dictionary(series).get('full_count'))) #Total number of pixels inside the polygon
-      .set('Pixel_Size',pixel_size) #Size of the pixel used
-    )
+      #If polygon area is to big and causes memory limit error, bestEffort is used
+      #bestEffort - If the polygon would contain too many pixels at the given scale, compute and use a larger scale which would allow the operation to succeed.
+
+      if bestEffort == False:
+        series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+
+      else:
+        pixel_size = 30
+        series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+
+      #Return defined information for the choosed polygon
+      return (ee.Feature(geometry)
+        .set('id',ee.String(img.id())) #Image ID
+        .set('date',orgDate) #Date
+        .set('satelite',img.get('satelite')) #Sapacraft plataform name (i.e. Sentinel 2A or 2B)
+        .set('MGRS_TILE',img.get('MGRS_TILE')) #Reference tile grid
+        .set('AREA_HA',ee.Feature(geometry).area(1).divide(10000)) #Choosed polygon ID Field
+        # .set('NDVI_mean',ee.Number(ee.Dictionary(series).get('NDVI_mean'))) #NDVI pixel average for the polygon
+        .set('NDVI_median',ee.Number(ee.Dictionary(series).get('NDVI_median'))) #NDVI pixel median for the polygon
+        # .set('NDVI_min',ee.Number(ee.Dictionary(series).get('NDVI_min'))) #NDVI pixel minimum value for the polygon
+        # .set('NDVI_max',ee.Number(ee.Dictionary(series).get('NDVI_max'))) #NDVI pixel maximum value for the polygon
+        # .set('NDVI_stdDev',ee.Number(ee.Dictionary(series).get('NDVI_stdDev'))) #NDVI pixel Standard Deviation for the polygon
+        .set('Pixel_Count',ee.Number(ee.Dictionary(series).get('NDVI_count'))) #Number of pixels cloudless and shadowless used for estimatives
+        .set('Total_Pixels',ee.Number(ee.Dictionary(series).get('full_count'))) #Total number of pixels inside the polygon
+        .set('Pixel_Size',pixel_size) #Size of the pixel used
+      )
 
   #Turns Feature into Dictionary to get properties
   def toDict(feat):
@@ -231,22 +310,13 @@ def getTimeSeries(geometry,bestEffort=False):
     """
     return ee.Feature(feat).toDictionary()
 
-  #Calls the Sentinel 2 data collection, filter the images based in the polygon location, masks cloud/shadow and calculates NDVI
-  s2 = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-    .filterBounds(geometry.geometry()))
-
-  csPlus = (ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED')
-				.filterBounds(geometry.geometry()))
-
-  csPlusBands = csPlus.first().bandNames();
-
-  imgCol = (s2.linkCollection(csPlus, csPlusBands)
-        .map(maskEdges)
-        .map(mask_and_ndvi))
+  # collection = 'Sentinel'
+  
+  imgCol = select_collection(collection)
 
   #Extracts NDVI time series by polygon, remove the nulls and build a dictionary struture to the data
   Coll_fill = (imgCol.toList(imgCol.size()).map(reduceData)
-    .filter(ee.Filter.notNull(['NDVI_mean']))
+    .filter(ee.Filter.notNull(['NDVI_median']))
     .map(toDict)
     )
 
@@ -258,7 +328,7 @@ Function responsible to build and structure the time series library.
 """
 
 #Builds and writes a NDVI time series with Sentinel 2 data by a target vector asset
-def build_time_series(index,obj,id_field,outfile,asset,bestEffort=False):
+def build_time_series(index,obj,id_field,outfile,asset,collection,bestEffort=False):
   
   """
   Builds and writes NDVI time series data for a target vector asset, processing one polygon at a time.
@@ -288,7 +358,7 @@ def build_time_series(index,obj,id_field,outfile,asset,bestEffort=False):
   selected_sample = samples.filter(ee.Filter.eq(id_field,obj)).first()
 
   #Extracts the formated NDVI time series from the target polygon
-  point_series = getTimeSeries(ee.Feature(selected_sample),bestEffort).getInfo()
+  point_series = getTimeSeries(ee.Feature(selected_sample),collection,bestEffort).getInfo()
 
   #Writes the time series by data frame row
   for item in point_series:
@@ -296,10 +366,10 @@ def build_time_series(index,obj,id_field,outfile,asset,bestEffort=False):
 
   #Rounds the NDVI values by four decimals (avoid huge and slow tables)
   df['AREA_HA'] = df['AREA_HA'].round(decimals=4)
-  df['NDVI_mean'] = df['NDVI_mean'].round(decimals=4)
-  df['NDVI_stdDev'] = df['NDVI_stdDev'].round(decimals=4)
-  df['NDVI_max'] = df['NDVI_max'].round(decimals=4)
-  df['NDVI_min'] = df['NDVI_min'].round(decimals=4)
+  # df['NDVI_mean'] = df['NDVI_mean'].round(decimals=4)
+  # df['NDVI_stdDev'] = df['NDVI_stdDev'].round(decimals=4)
+  # df['NDVI_max'] = df['NDVI_max'].round(decimals=4)
+  # df['NDVI_min'] = df['NDVI_min'].round(decimals=4)
   df['NDVI_median'] = df['NDVI_median'].round(decimals=4)
   df['date'] = pd.to_datetime(df['date'])
 
@@ -328,7 +398,7 @@ Function responsible to check the consistency of the time series library.
 """
 
 #Checks if time series processing works
-def build_time_series_check(index,obj,id_field,outfile,asset,checker=False):
+def build_time_series_check(index,obj,id_field,outfile,asset,collection,checker=False):
   
   """
   Checks the consistency of the NDVI time series library and handles errors during processing.
@@ -375,7 +445,7 @@ def build_time_series_check(index,obj,id_field,outfile,asset,checker=False):
 
 
   try:
-    check = build_time_series(index,obj,id_field,outfile,asset)
+    check = build_time_series(index,obj,id_field,outfile,asset,collection)
     time = check[1]
 
     if check[0] == False:
@@ -390,7 +460,7 @@ def build_time_series_check(index,obj,id_field,outfile,asset,checker=False):
 
       logger.exception(f'Index {index} - Request [{obj}] fails. Trying the best effort!')
 
-      check = build_time_series(index,obj,id_field,outfile,asset,True)
+      check = build_time_series(index,obj,id_field,outfile,asset,collection,True)
 
       if check[0] == False:
         logger.debug('raised')
@@ -453,7 +523,7 @@ def build_id_list(asset,id_field,colab_folder,outname):
 Function responsible to catch argument information and start run the process.
 """
 
-def run(asset,id_field,output_name,colab_folder,db):
+def run(asset,id_field,output_name,colab_folder,db,collection):
   """
   Manages the overall workflow by catching argument information and initiating the process of extracting NDVI time series data for specified polygonal areas.
 
@@ -496,12 +566,12 @@ def run(asset,id_field,output_name,colab_folder,db):
 
   #Structures the arguments for jobLib::Parallel
   worker_args = [
-    (listPolygons_text.index(obj),obj,id_field,output_name,asset,check_file) \
+    (listPolygons_text.index(obj),obj,id_field,output_name,asset,collection,check_file) \
     for obj in list_num
   ]
 
   #Number of to use (more than 20 generate many sleeping queries)
-  n_cores = 14 #Recommended
+  n_cores = 12 #Recommended
 
   #Starts the parallel processing
   infos = Parallel(n_jobs=n_cores, backend='multiprocessing')(delayed(build_time_series_check)(*args) for args in worker_args)
