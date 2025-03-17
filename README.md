@@ -16,7 +16,7 @@
 - Leandro Leal Parente - leal.parente@gmail.com (Gap Filling and Trend Analysis implementation)
 
 ### Version
-- 1.1.0
+- 2.0.0
 
 ### Requirements (installation order from top to bottom)
 - Python 3.10
@@ -27,6 +27,7 @@
 - Scikit-learn
 - Joblib
 - Psutil
+- Statsmodels 
 - [scikit-map](https://github.com/openlandmap/scikit-map)
 - [Earthengine-api](https://developers.google.com/earth-engine/guides/python_install)
 
@@ -50,7 +51,7 @@ If you don't know how to upload your vector data in Earth Engine, you can follow
 
 #### Command line example
 ```bash
-python main.py --asset users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m --id_field ID_POINTS --output_name LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork
+python main.py -a users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m -id ID_POINTS -o LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork -c Sentinel -start 2019-01-01 -end 2025-01-01 -w 15
 ```
 ### Roadmap
 
