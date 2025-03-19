@@ -20,7 +20,7 @@ if __name__ == '__main__':
   parser.add_argument('-o','--output_name', type=str, required=True, help='The output file name')
   parser.add_argument('-start','--start_date', type=str, required=True, help='Start date baseline for the time series decomposition (i.e. 2019-01-01)')
   parser.add_argument('-end','--end_date', type=str, required=True, help='End date baseline for the time series decomposition (i.e. 2025-01-01)')
-  parser.add_argument('-w','--window', type=str, required=False, help='Size of the time series standadization window (Default is 15 - average of 15 days)')
+  parser.add_argument('-w','--window', type=int, required=False, help='Size of the time series standadization window (Default is 15 - average of 15 days)')
 
   args = parser.parse_args()
 
