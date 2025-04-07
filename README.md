@@ -8,7 +8,7 @@
 - 🦖T(h)eroPoDa+ - Time Series Extraction for Polygonal Data and Trend Analysis ⬛
 
 ### Description
-- Toolkit created to extract median NDVI Time Series from Sentinel 2 data 🛰 stored in Google Earth Engine[![image](https://user-images.githubusercontent.com/13785909/209228496-9fe31adc-a7cb-47c3-b476-64d82541f139.png)](https://earthengine.google.com/), perform gap filling (using [scikit-map](https://github.com/openlandmap/scikit-map)) and trend analysis (using [STL]([https://github.com/openlandmap/scikit-map](https://www.statsmodels.org/dev/generated/statsmodels.tsa.seasonal.STL.html#statsmodels.tsa.seasonal.STL)) and [OLS]([https://github.com/openlandmap/scikit-map](https://www.statsmodels.org/dev/generated/statsmodels.regression.linear_model.OLS.html#statsmodels.regression.linear_model.OLS))) 
+- Toolkit created to extract median NDVI Time Series from Sentinel 2 data 🛰 stored in Google Earth Engine[![image](https://user-images.githubusercontent.com/13785909/209228496-9fe31adc-a7cb-47c3-b476-64d82541f139.png)](https://earthengine.google.com/), perform gap filling (using [scikit-map](https://github.com/openlandmap/scikit-map)) and trend analysis (using [STL](https://www.statsmodels.org/dev/generated/statsmodels.tsa.seasonal.STL.html#statsmodels.tsa.seasonal.STL) and [OLS](https://www.statsmodels.org/dev/generated/statsmodels.regression.linear_model.OLS.html#statsmodels.regression.linear_model.OLS))
 
 ### Author
 - Vinícius Vieira Mesquita - vinicius.mesquita@ufg.br (Main Theropoda)
