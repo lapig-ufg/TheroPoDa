@@ -139,7 +139,8 @@ def run(input_file, id_pol, dt_5days, season_size,field_id, output_file):
 
   df_sql = f"SELECT *, ((Pixel_Count*1.0 / Total_Pixels) * 100) as Pixel_used FROM restoration WHERE {field_id} = {id_pol}"
   df =  pd.read_sql_query(df_sql, con=con)
-  df['date'] = pd.to_datetime(df['date'], errors='coerce')
+  #df['date'] = pd.to_datetime(df['date'], errors='coerce')
+  df.loc[:, 'date'] = pd.to_datetime(df['date'], errors='coerce')
   #df = df.set_index('date')
 
   #logger.info(f'Number of objects to process: {total}')
@@ -157,8 +158,9 @@ def run(input_file, id_pol, dt_5days, season_size,field_id, output_file):
   
   result = pd.DataFrame(np.concatenate([ts_type, trend, ts], axis=-1)[0,:,:], columns=columns)
   result = result.round(8)
-  result['id_pol'] = result['id_pol'].astype(int)
-  
+  #result['id_pol'] = result['id_pol'].astype(int)
+  result.loc[:, 'id_pol'] = result['id_pol'].astype(int)
+    
   result.to_parquet(output_file,partition_cols=['id_pol'])
   ttprint(f"Polygon {id_pol} saved in {output_file}")
   return id_pol

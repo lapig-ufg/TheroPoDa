@@ -10,79 +10,95 @@ import pandas as pd
 from skmap.misc import date_range, ttprint
 from skmap import parallel
 
-if __name__ == '__main__':
+def run_analysis(asset, id_field, collection, output_name, output_folder, start_date, end_date, window=15,n_cores=12):
 
-  parser = argparse.ArgumentParser(description='Toolkit created to extract Time Series information from Sentinel 2 stored in Earth Engine, perform gap filling and trend analysis image.')
-    
-  parser.add_argument('-a','--asset', type=str, required=True, help='The asset name or path')
-  parser.add_argument('-id','--id_field', type=str, required=True, help='The ID field name')
-  parser.add_argument('-c','--collection', type=str, required=True, help='The used satellite collection (e.g. Landsat, Sentinel)')
-  parser.add_argument('-o','--output_name', type=str, required=True, help='The output file name')
-  parser.add_argument('-start','--start_date', type=str, required=True, help='Start date baseline for the time series decomposition (i.e. 2019-01-01)')
-  parser.add_argument('-end','--end_date', type=str, required=True, help='End date baseline for the time series decomposition (i.e. 2025-01-01)')
-  parser.add_argument('-w','--window', type=int, required=False, help='Size of the time series standadization window (Default is 15 - average of 15 days)')
-
-  args = parser.parse_args()
-
-  asset = args.asset #'users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m' #Earth Engine Vector Asset
-  id_field = args.id_field #'ID_POINTS' #Vector collumn used as ID (use unique identifiers!)
-	
-  db = asset.split('/')[-1]
-  
-  #db_name = args.output_name +'.db' #db + '.db'  
-  
-  colab_folder = ''
-  output_name = args.output_name #db_name
-
-  conn = sqlite3.connect(output_name+'.db')
-  conn.close()
-
-  #Check if polygon list file exists
-  if os.path.isfile(os.path.join(colab_folder,output_name + '_polygonList.txt')) is False:
-    build_id_list(asset,id_field,colab_folder,output_name)
-
-  theropoda_run(asset,id_field,output_name,colab_folder,db,args.collection)
-
-  start_date_trend, end_date_trend= args.start_date, args.end_date
-  output_file_trends = f'{output_name}_trend_analysis.pq'
-
-  ################################
-  ## SQLITE access
-  ################################
-  ttprint(f"Preparing {output_name}")
-  con = sqlite3.connect(output_name+'.db')
-  cur = con.cursor()
-  res = cur.execute(f"CREATE INDEX IF NOT EXISTS restoration_id_pol ON restoration ({id_field})")
-  con.commit()
-  
-  ################################
-  ## Common data structures
-  ################################
-  ttprint(f"Preparing polygon ids")
-  
-  idx_sql = f"SELECT {id_field}, MIN(date) min_date, MAX(date) max_date, COUNT(*) count FROM restoration GROUP BY 1 ORDER BY 1"
-  idx =  pd.read_sql_query(idx_sql, con=con)
+  """Main analysis function that can be called directly"""
+  # Your existing analysis code here
+  print(f"Starting analysis with parameters:")
+  print(f"Asset: {asset}")
+  print(f"ID Field: {id_field}")
+  print(f"Collection: {collection}")
+  print(f"Output file: {output_name}")
+  print(f"Output folder: {output_folder}")
+  print(f"Date Range: {start_date} to {end_date}")
+  print(f"Window Size: {window}") 
+  print(f"Number of threads: {n_cores}") 
   
   try:
-    window = int(parser.window)
-  except:
-    if args.collection == 'Sentinel':
-      window = 15 #days
-    elif args.collection == 'Landsat':
-      window = 16 #days
-    else:
-      window = 15 #days
+	
+    db = asset.split('/')[-1]
+    
+    colab_folder = output_folder
+    
+    output_path = os.path.join(output_folder, output_name)
 
-  dt_days = list(date_range(start_date_trend, end_date_trend, date_unit='days', date_step=window, ignore_29feb=True))
-  season_size = int(len(dt_days) / window)
+    #conn = sqlite3.connect(output_name+'.db')
+    conn = sqlite3.connect(output_path + '.db')
+    conn.close()
 
-  args = [ (output_name+'.db', r[f'{id_field}'], dt_days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
+    #Check if polygon list file exists
+    if os.path.isfile(output_path + '_polygonList.txt') is False:
+      build_id_list(asset,id_field,colab_folder,output_name)
+
+    theropoda_run(asset,id_field,output_name,colab_folder,db,collection,n_cores=n_cores)
+
+    start_date_trend, end_date_trend= start_date, end_date
+    output_file_trends = f'{output_path}_trend_analysis.pq'
+
+    ################################
+    ## SQLITE access
+    ################################
+    ttprint(f"Preparing {output_name}")
+    #con = sqlite3.connect(output_name+'.db')
+    con = sqlite3.connect(output_path + '.db')
+    cur = con.cursor()
+    res = cur.execute(f"CREATE INDEX IF NOT EXISTS restoration_id_pol ON restoration ({id_field})")
+    con.commit()
+    
+    ################################
+    ## Common data structures
+    ################################
+    ttprint(f"Preparing polygon ids")
+    
+    idx_sql = f"SELECT {id_field}, MIN(date) min_date, MAX(date) max_date, COUNT(*) count FROM restoration GROUP BY 1 ORDER BY 1"
+    idx =  pd.read_sql_query(idx_sql, con=con)
+    
+    try:
+      window = int(window)
+    except:
+      if collection == 'Sentinel':
+        window = 15 #days
+      elif collection == 'Landsat':
+        window = 16 #days
+      else:
+        window = 15 #days
+
+    dt_days = list(date_range(start_date_trend, end_date_trend, date_unit='days', date_step=window, ignore_29feb=True))
+    season_size = int(len(dt_days) / window)
+
+    #args = [ (output_name+'.db', r[f'{id_field}'], dt_days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
+    args = [ (output_path+ '.db', r[f'{id_field}'], dt_days, season_size, id_field, output_file_trends) for _, r in idx.iterrows() ]
+    
+    ttprint(f"Starting trend analysis on {len(args)} polygons")
+    for id_pol in parallel.job(trend_run, args, joblib_args={'backend': 'multiprocessing'}):
+      continue
+    
+    df2conv = pd.read_parquet(output_file_trends)
+    df2conv.to_parquet(f'{output_path}_trend_analysis.parquet')
+
+    shutil.rmtree(output_file_trends)  
+    ttprint("Analysis completed successfully!")
+    return True
   
-  ttprint(f"Starting trend analysis on {len(args)} polygons")
-  for id_pol in parallel.job(trend_run, args, joblib_args={'backend': 'multiprocessing'}):
-    continue
+  except Exception as e:
+    print(f"Analysis failed: {str(e)}")
+    return False
   
-  df2conv = pd.read_parquet(output_file_trends)
-  df2conv.to_parquet(f'{output_name}_trend_analysis.parquet')
-
-  shutil.rmtree(output_file_trends)  
+# Remove or modify the existing if __name__ == '__main__' block
+if __name__ == '__main__':
+    # Can keep this for command-line usage or remove it
+    import argparse
+    parser = argparse.ArgumentParser()
+    # ... add your argument definitions ...
+    args = parser.parse_args()
+    run_analysis(**vars(args))

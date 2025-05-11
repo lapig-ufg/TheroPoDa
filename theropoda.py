@@ -523,7 +523,7 @@ def build_id_list(asset,id_field,colab_folder,outname):
 Function responsible to catch argument information and start run the process.
 """
 
-def run(asset,id_field,output_name,colab_folder,db,collection):
+def run(asset,id_field,output_name,colab_folder,db,collection,n_cores=None):
   """
   Manages the overall workflow by catching argument information and initiating the process of extracting NDVI time series data for specified polygonal areas.
 
@@ -571,10 +571,10 @@ def run(asset,id_field,output_name,colab_folder,db,collection):
   ]
 
   #Number of to use (more than 20 generate many sleeping queries)
-  n_cores = 12 #Recommended
+  #n_cores = threads #Recommended
 
   #Starts the parallel processing
-  infos = Parallel(n_jobs=n_cores, backend='multiprocessing')(delayed(build_time_series_check)(*args) for args in worker_args)
+  infos = Parallel(n_jobs=int(n_cores), backend='multiprocessing')(delayed(build_time_series_check)(*args) for args in worker_args)
 
   if check_file is True:
     first_dict = {'time': 0}
