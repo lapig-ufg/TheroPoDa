@@ -365,13 +365,16 @@ def build_time_series(index,obj,id_field,outfile,asset,collection,bestEffort=Fal
     df  = pd.concat([df,pd.DataFrame(item,index=[0])])
 
   #Rounds the NDVI values by four decimals (avoid huge and slow tables)
-  df['AREA_HA'] = df['AREA_HA'].round(decimals=4)
+  #df['AREA_HA'] = df['AREA_HA'].round(decimals=4)
+  df.loc[:, 'AREA_HA'] = df['AREA_HA'].round(decimals=4)
   # df['NDVI_mean'] = df['NDVI_mean'].round(decimals=4)
   # df['NDVI_stdDev'] = df['NDVI_stdDev'].round(decimals=4)
   # df['NDVI_max'] = df['NDVI_max'].round(decimals=4)
   # df['NDVI_min'] = df['NDVI_min'].round(decimals=4)
-  df['NDVI_median'] = df['NDVI_median'].round(decimals=4)
-  df['date'] = pd.to_datetime(df['date'])
+  #df['NDVI_median'] = df['NDVI_median'].round(decimals=4)
+  df.loc[:, 'NDVI_median'] = df['NDVI_median'].round(decimals=4)
+  #df['date'] = pd.to_datetime(df['date'])
+   df.loc[:, 'date'] = pd.to_datetime(df['date'])
 
   conn = sqlite3.connect(outfile)
 
