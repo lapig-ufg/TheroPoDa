@@ -374,7 +374,7 @@ def build_time_series(index,obj,id_field,outfile,asset,collection,bestEffort=Fal
   #df['NDVI_median'] = df['NDVI_median'].round(decimals=4)
   df.loc[:, 'NDVI_median'] = df['NDVI_median'].round(decimals=4)
   #df['date'] = pd.to_datetime(df['date'])
-   df.loc[:, 'date'] = pd.to_datetime(df['date'])
+  df.loc[:, 'date'] = pd.to_datetime(df['date'])
 
   conn = sqlite3.connect(outfile)
 

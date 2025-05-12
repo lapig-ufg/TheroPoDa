@@ -4,12 +4,64 @@ import sys
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QMessageBox,
-    QSplitter, QComboBox, QSpinBox, QDateEdit,QFileDialog
+    QSplitter, QComboBox, QSpinBox, QDateEdit, QFileDialog,
+    QDialog, QTextEdit
 )
 from PyQt5.QtCore import Qt, QDate, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon
 
-from PyQt5.QtCore import QStandardPaths
+
+import ee
+import os
+import subprocess
+
+def initialize_ee():
+    """Initialize Earth Engine using gcloud credentials"""
+    try:
+        # First try normal initialization
+        ee.Initialize()
+        return True
+    except (ee.ee_exception.EEException, Exception):
+        # If that fails, guide user through gcloud auth
+        response = QMessageBox.question(
+            None,
+            "Authentication Required",
+            "Earth Engine needs Google Cloud authentication.\n\n"
+            "We'll open a terminal window where you need to:\n"
+            "1. Run the command that appears\n"
+            "2. Login with your Google account\n"
+            "3. Return here when done\n\n"
+            "Proceed?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if response == QMessageBox.Yes:
+            try:
+                # Platform-specific terminal commands
+                if os.name == 'nt':  # Windows
+                    subprocess.Popen(['start', 'cmd', '/k', 'gcloud auth application-default login'], shell=True)
+                elif os.uname().sysname == 'Darwin':  # macOS
+                    subprocess.Popen(['open', '-a', 'Terminal', '-e', 'gcloud auth application-default login'])
+                else:  # Linux
+                    subprocess.Popen(['x-terminal-emulator', '-e', 'gcloud auth application-default login'])
+                
+                QMessageBox.information(
+                    None,
+                    "Next Steps",
+                    "1. Complete the login in the terminal\n"
+                    "2. Close the terminal when done\n"
+                    "3. Restart this application"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    None,
+                    "Error",
+                    f"Couldn't open terminal: {str(e)}\n\n"
+                    "Please manually run this command:\n"
+                    "gcloud auth application-default login"
+                )
+        return False
+
 
 class AnalysisThread(QThread):
     """Thread to run the analysis without freezing the GUI"""
@@ -32,11 +84,34 @@ class AnalysisThread(QThread):
 class TheroPoDaGUI(QMainWindow):
     def __init__(self):
         super().__init__()
+        if not initialize_ee():
+            sys.exit(1)  # Exit if authentication fails
+        # if not check_ee_auth():
+        #     self.show_auth_dialog()
         self.setWindowTitle("TheroPoDa - Time Series Analysis Tool")
         self.setWindowIcon(QIcon('icon.ico'))
         self.setGeometry(100, 100, 800, 400)
         self.analysis_thread = None
         self.setup_ui()
+
+    def initialize_ee(self):
+        """Initialize EE with authentication check"""
+        try:
+            ee.Initialize()
+            return True
+        except ee.ee_exception.EEException:
+            auth_dialog = EEAuthDialog(self)
+            return auth_dialog.exec_() == QDialog.Accepted
+    
+    def show_auth_dialog(self):
+        auth_dialog = EEAuthDialog(self)
+        if auth_dialog.exec_() != QDialog.Accepted:
+            QMessageBox.warning(
+                self,
+                "Authentication Required",
+                "You must authenticate with Earth Engine to use this application."
+            )
+            sys.exit(1)
 
     def setup_ui(self):
         central_widget = QWidget()
@@ -61,7 +136,7 @@ class TheroPoDaGUI(QMainWindow):
             input_layout
         )
              
-        #Choose output folder
+        # Choose output folder
         output_layout = QHBoxLayout()
         self.output_folder_input = QLineEdit()
         self.output_folder_input.setPlaceholderText("Select output folder...")
@@ -90,7 +165,7 @@ class TheroPoDaGUI(QMainWindow):
         date_layout = QHBoxLayout()
         self.start_date = QDateEdit(QDate(2019, 1, 1))
         self.start_date.setCalendarPopup(True)
-        self.end_date = QDateEdit(QDate.currentDate())
+        self.end_date = QDateEdit(QDate(2025, 1, 1))
         self.end_date.setCalendarPopup(True)
         date_layout.addWidget(QLabel("Start:"))
         date_layout.addWidget(self.start_date)
@@ -108,8 +183,8 @@ class TheroPoDaGUI(QMainWindow):
         # Number of cores used
         input_layout.addWidget(QLabel("Number of Cores:"))
         self.core_spin = QSpinBox()
-        self.core_spin.setRange(1, os.cpu_count() or 4)  # Default to system core count
-        self.core_spin.setValue(min(12, os.cpu_count() or 4))  # Default to 12 or less
+        self.core_spin.setRange(1, os.cpu_count() or 4)
+        self.core_spin.setValue(min(12, os.cpu_count() or 4))
         input_layout.addWidget(self.core_spin)
         
         # Buttons
@@ -131,7 +206,7 @@ class TheroPoDaGUI(QMainWindow):
         folder = QFileDialog.getExistingDirectory(
             self,
             "Select Output Folder",
-            "",  # Start in current directory
+            "",
             QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
         )
         if folder:
@@ -172,6 +247,12 @@ class TheroPoDaGUI(QMainWindow):
             
         if self.analysis_thread and self.analysis_thread.isRunning():
             QMessageBox.warning(self, "Warning", "Analysis is already running!")
+            return
+            
+        try:
+            ee.Initialize()
+        except:
+            self.show_auth_dialog()
             return
             
         self.status_label.setText("Running analysis...")
