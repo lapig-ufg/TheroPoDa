@@ -242,9 +242,9 @@ def getTimeSeries(geometry,collection,bestEffort=False):
         # .combine(**{'reducer2': ee.Reducer.max(),'sharedInputs':True,})
         .combine(**{'reducer2': ee.Reducer.count(),'sharedInputs':True}))
     
-    year = ee.Algorithms.If(ee.Number.parse(orgDate.split('-').get(0)).lte(2023), ee.Number.parse(orgDate.split('-').get(0)),2023)
+    year = ee.Algorithms.If(ee.Number.parse(orgDate.split('-').get(0)).lte(2024), ee.Number.parse(orgDate.split('-').get(0)),2024)
     
-    pasture_mapBiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1')
+    pasture_mapBiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_coverage_v2')
                          .select(ee.String('classification_').cat(ee.Number(year).toInt().format()))
                          .eq(15)
                          .clip(ee.Feature(geometry).geometry()))
@@ -601,5 +601,6 @@ def run(asset,id_field,output_name,colab_folder,db,collection):
 
   logger.success(f'The average processing time was {round(pd.DataFrame(time_list).mean()[0],2)} seconds')
   logger.success(f'Processing finished. All the work took {round(time.time() - start_time,3)} seconds to complete')
+
 
 
