@@ -46,7 +46,7 @@
 | --start_date or -start    | Start date baseline for the time series decomposition                              | 2019-01-01 |
 | --end_date or -end        | End date baseline for the time series decomposition                                | 2025-01-01 |
 | --window or -w            | Size of the time series standadization window (Default is 15 - average of 15 days) | 15 |
-| --collection or -c        | The used satellite collection                                                      | Only Landsat or Sentinel (MODIS MOD13Q1 will be added soon) |
+| --collection or -c        | The used satellite collection                                                      | Only "Landsat" or "Sentinel" (MODIS MOD13Q1 will be added soon) |
 
 If you don't know how to upload your vector data in Earth Engine, you can follow the tutorial [clicking this link.](https://developers.google.com/earth-engine/guides/table_upload)
 
