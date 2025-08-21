@@ -241,12 +241,17 @@ def getTimeSeries(geometry,collection,bestEffort=False):
         # .combine(**{'reducer2': ee.Reducer.min(),'sharedInputs':True,})
         # .combine(**{'reducer2': ee.Reducer.max(),'sharedInputs':True,})
         .combine(**{'reducer2': ee.Reducer.count(),'sharedInputs':True}))
+
+    pasture_mapBiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1')
+                         .select(ee.String('classification_').cat(orgDate.split('-').get(0)))
+                         .eq(15)
+                         .clip(ee.Feature(geometry).geometry()))
     
     if collection == 'Landsat':
       
       pixel_size = 30
       
-      series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), 30, None, None,False,1e13,16)
+      series = img.updateMask(pasture_mapBiomas).reduceRegion(reducers,ee.Feature(geometry).geometry(), 30, None, None,False,1e13,16)
       
       return (ee.Feature(geometry)
         .set('id',ee.String(img.id())) #Image ID
@@ -274,11 +279,11 @@ def getTimeSeries(geometry,collection,bestEffort=False):
       #bestEffort - If the polygon would contain too many pixels at the given scale, compute and use a larger scale which would allow the operation to succeed.
 
       if bestEffort == False:
-        series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+        series = img.updateMask(pasture_mapBiomas).reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
 
       else:
         pixel_size = 30
-        series = img.reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+        series = img.updateMask(pasture_mapBiomas).reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
 
       #Return defined information for the choosed polygon
       return (ee.Feature(geometry)
@@ -594,3 +599,4 @@ def run(asset,id_field,output_name,colab_folder,db,collection):
 
   logger.success(f'The average processing time was {round(pd.DataFrame(time_list).mean()[0],2)} seconds')
   logger.success(f'Processing finished. All the work took {round(time.time() - start_time,3)} seconds to complete')
+
