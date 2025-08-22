@@ -31,6 +31,22 @@
 - [scikit-map](https://github.com/openlandmap/scikit-map)
 - [Earthengine-api](https://developers.google.com/earth-engine/guides/python_install)
 
+Easy way to install with [UV](https://docs.astral.sh/uv/) Python througth the CLI:
+
+```bash
+uv init
+
+uv python install 3.1.0 
+
+uv add pip rasterio joblib geopandas scikit-learn psutil statsmodels fastparquet pyarrow loguru IPython earthengine-api numexpr
+
+uv run earthengine authenticate
+
+uv run pip install https://github.com/cgohlke/geospatial-wheels/releases/download/v2025.1.20/GDAL-3.10.1-cp310-cp310-win_amd64.whl
+
+uv pip install 'git+https://github.com/openlandmap/scikit-map#egg=scikit-map[full]'
+```
+
 ### How to use
 
 - In this version of TheroPoDa (v2), you could extract a series of median NDVI from Sentinel 2, Landsat 8 and 9 for a Feature Collection of polygons simplily by passing arguments to the python code exemplified below.
