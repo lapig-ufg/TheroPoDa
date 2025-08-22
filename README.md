@@ -31,7 +31,7 @@
 - [scikit-map](https://github.com/openlandmap/scikit-map)
 - [Earthengine-api](https://developers.google.com/earth-engine/guides/python_install)
 
-The easiest way to install this packahe is using [UV](https://docs.astral.sh/uv/) Python througth the CLI, inside the Therophoda folder:
+The easiest way to install this package is using [UV](https://docs.astral.sh/uv/) Python througth the CLI, inside the Therophoda folder:
 
 ```bash
 uv init
