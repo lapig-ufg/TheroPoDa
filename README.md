@@ -42,7 +42,11 @@ uv add pip rasterio joblib geopandas scikit-learn psutil statsmodels fastparquet
 
 uv run earthengine authenticate
 
+#On Windows
 uv run pip install https://github.com/cgohlke/geospatial-wheels/releases/download/v2025.1.20/GDAL-3.10.1-cp310-cp310-win_amd64.whl
+
+#On Linux
+uv run pip install GDAL==3.10
 
 uv pip install 'git+https://github.com/openlandmap/scikit-map#egg=scikit-map[full]'
 ```
