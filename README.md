@@ -38,7 +38,7 @@ The easiest way to install this package is using [UV](https://docs.astral.sh/uv/
 uv init
 
 #2
-uv python install 3.1.0 
+uv python install 3.10 
 
 #3
 uv add pip rasterio joblib geopandas scikit-learn psutil statsmodels fastparquet pyarrow loguru IPython earthengine-api numexpr
