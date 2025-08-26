@@ -34,21 +34,21 @@
 The easiest way to install this package is using [UV](https://docs.astral.sh/uv/getting-started/installation/#installation-methods) Python througth the CLI, inside the Therophoda folder:
 
 ```bash
-uv init
+1 - uv init
 
-uv python install 3.1.0 
+2 - uv python install 3.1.0 
 
-uv add pip rasterio joblib geopandas scikit-learn psutil statsmodels fastparquet pyarrow loguru IPython earthengine-api numexpr
+3 - uv add pip rasterio joblib geopandas scikit-learn psutil statsmodels fastparquet pyarrow loguru IPython earthengine-api numexpr
 
-uv run earthengine authenticate
+4 - uv run earthengine authenticate
 
-#On Windows
+5 - #On Windows
 uv run pip install https://github.com/cgohlke/geospatial-wheels/releases/download/v2025.1.20/GDAL-3.10.1-cp310-cp310-win_amd64.whl
 
-#On Linux
+5 - #On Linux
 uv run pip install GDAL==3.10
 
-uv pip install 'git+https://github.com/openlandmap/scikit-map#egg=scikit-map[full]'
+6 - uv pip install 'git+https://github.com/openlandmap/scikit-map#egg=scikit-map[full]'
 ```
 
 ### How to use
