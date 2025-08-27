@@ -93,7 +93,7 @@ Run the `ee.Authenticate` function to authenticate your access to Earth Engine s
 #ee.Authenticate()
 
 # Initialize the library.
-ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
+ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com',project='ee-vieiramesquita')
 
    
 """### Get the NDVI Time Series from Earth Engine
@@ -243,17 +243,39 @@ def getTimeSeries(geometry,collection,bestEffort=False):
         .combine(**{'reducer2': ee.Reducer.count(),'sharedInputs':True}))
     
     year = ee.Algorithms.If(ee.Number.parse(orgDate.split('-').get(0)).lte(2024), ee.Number.parse(orgDate.split('-').get(0)),2024)
+      
+    def setIndex(feat):
+        return feat.set('cd_id',1)
     
-    pasture_mapBiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_coverage_v2')
-                         .select(ee.String('classification_').cat(ee.Number(year).toInt().format()))
-                         .eq(15)
-                         .clip(ee.Feature(geometry).geometry()))
+    states = (
+        ee.FeatureCollection("projects/ee-vieiramesquita/assets/BR_UF_2022")
+        .filter(ee.Filter.inList("SIGLA_UF", ["SC", "RS"]))
+        .map(setIndex)
+        .reduceToImage(**{"properties": ["cd_id"],"reducer": ee.Reducer.max()}
+        )
+        .gt(0)
+    )
+  
+    pantanal = (ee.FeatureCollection('users/vieiramesquita/lm_bioma_250')
+      .filter(ee.Filter.eq('Bioma','Pantanal'))
+      .reduceToImage(**{'properties': ['CD_Bioma'],'reducer':ee.Reducer.max()}).gt(0))
+
+    grassland_mask = ee.ImageCollection([states,pantanal]).mosaic()
+
+    mapbiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_coverage_v2')
+                    .select(ee.String('classification_').cat(ee.Number(year).toInt().format()))
+                    .clip(geometry))
+      
+    pasture_mapBiomas =  mapbiomas.eq(15)
+    grassland_mapBiomas =  mapbiomas.updateMask(grassland_mask).remap([11,12],[1,1],0)
+
+    main_mask = pasture_mapBiomas.add(grassland_mapBiomas.unmask()).gt(0)
     
     if collection == 'Landsat':
       
       pixel_size = 30
       
-      series = img.updateMask(pasture_mapBiomas).reduceRegion(reducers,ee.Feature(geometry).geometry(), 30, None, None,False,1e13,16)
+      series = img.updateMask(main_mask).reduceRegion(reducers,ee.Feature(geometry).geometry(), 30, None, None,False,1e13,16)
       
       return (ee.Feature(geometry)
         .set('id',ee.String(img.id())) #Image ID
@@ -281,11 +303,11 @@ def getTimeSeries(geometry,collection,bestEffort=False):
       #bestEffort - If the polygon would contain too many pixels at the given scale, compute and use a larger scale which would allow the operation to succeed.
 
       if bestEffort == False:
-        series = img.updateMask(pasture_mapBiomas).reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+        series = img.updateMask(main_mask).reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
 
       else:
         pixel_size = 30
-        series = img.updateMask(pasture_mapBiomas).reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
+        series = img.updateMask(main_mask).reduceRegion(reducers,ee.Feature(geometry).geometry(), pixel_size,None,None,False,1e13,16)
 
       #Return defined information for the choosed polygon
       return (ee.Feature(geometry)
