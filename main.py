@@ -1,3 +1,8 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+
 #TheroPoDa is HUNGRY, she gonna "eat" all the data of EE and store it in her .db "belly" (SQLite file recognized by the .db extension)"
 from theropoda import run as theropoda_run
 from theropoda import build_id_list
