@@ -332,7 +332,7 @@ Function responsible to build and structure the time series library.
 """
 
 #Builds and writes a NDVI time series with Sentinel 2 data by a target vector asset
-def build_time_series(index,obj,id_field,outfile,asset,collection,bestEffort=False):
+def build_time_series(index,obj,id_field,outfile,asset,collection,lulc_custom_mask,bestEffort=False):
   
   """
   Builds and writes NDVI time series data for a target vector asset, processing one polygon at a time.
@@ -362,7 +362,7 @@ def build_time_series(index,obj,id_field,outfile,asset,collection,bestEffort=Fal
   selected_sample = samples.filter(ee.Filter.eq(id_field,obj)).first()
 
   #Extracts the formated NDVI time series from the target polygon
-  point_series = getTimeSeries(ee.Feature(selected_sample),collection,bestEffort).getInfo()
+  point_series = getTimeSeries(ee.Feature(selected_sample),collection,lulc_custom_mask,bestEffort).getInfo()
 
   #Writes the time series by data frame row
   for item in point_series:
@@ -402,7 +402,7 @@ Function responsible to check the consistency of the time series library.
 """
 
 #Checks if time series processing works
-def build_time_series_check(index,obj,id_field,outfile,asset,collection,checker=False):
+def build_time_series_check(index,obj,id_field,outfile,asset,collection,lulc_custom_mask,checker=False):
   
   """
   Checks the consistency of the NDVI time series library and handles errors during processing.
@@ -449,7 +449,7 @@ def build_time_series_check(index,obj,id_field,outfile,asset,collection,checker=
 
 
   try:
-    check = build_time_series(index,obj,id_field,outfile,asset,collection)
+    check = build_time_series(index,obj,id_field,outfile,asset,collection,lulc_custom_mask)
     time = check[1]
 
     if check[0] == False:
@@ -464,7 +464,7 @@ def build_time_series_check(index,obj,id_field,outfile,asset,collection,checker=
 
       logger.exception(f'Index {index} - Request [{obj}] fails. Trying the best effort!')
 
-      check = build_time_series(index,obj,id_field,outfile,asset,collection,True)
+      check = build_time_series(index,obj,id_field,outfile,asset,collection,lulc_custom_mask,True)
 
       if check[0] == False:
         logger.debug('raised')
@@ -527,7 +527,7 @@ def build_id_list(asset,id_field,colab_folder,outname):
 Function responsible to catch argument information and start run the process.
 """
 
-def run(asset,id_field,output_name,colab_folder,db,collection):
+def run(asset,id_field,output_name,colab_folder,db,collection,lulc_custom_mask):
   """
   Manages the overall workflow by catching argument information and initiating the process of extracting NDVI time series data for specified polygonal areas.
 
@@ -570,7 +570,7 @@ def run(asset,id_field,output_name,colab_folder,db,collection):
 
   #Structures the arguments for jobLib::Parallel
   worker_args = [
-    (listPolygons_text.index(obj),obj,id_field,output_name,asset,collection,check_file) \
+    (listPolygons_text.index(obj),obj,id_field,output_name,asset,collection,lulc_custom_mask,check_file) \
     for obj in list_num
   ]
 
@@ -598,6 +598,7 @@ def run(asset,id_field,output_name,colab_folder,db,collection):
 
   logger.success(f'The average processing time was {round(pd.DataFrame(time_list).mean()[0],2)} seconds')
   logger.success(f'Processing finished. All the work took {round(time.time() - start_time,3)} seconds to complete')
+
 
 
 
