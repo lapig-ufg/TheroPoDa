@@ -25,7 +25,8 @@ if __name__ == '__main__':
   parser.add_argument('-o','--output_name', type=str, required=True, help='The output file name')
   parser.add_argument('-start','--start_date', type=str, required=True, help='Start date baseline for the time series decomposition (i.e. 2019-01-01)')
   parser.add_argument('-end','--end_date', type=str, required=True, help='End date baseline for the time series decomposition (i.e. 2025-01-01)')
-  parser.add_argument('-w','--window', type=int, required=False, help='Size of the time series standadization window (Default is 15 - average of 15 days)')
+  parser.add_argument('-w','--window', type=int, required=False, help='Size of the time series standadization window (Default is 15 - average of 15 days)')	
+  parser.lulc_custom_mask('-m','--mask', type=str, required=True, help='The land use or land cover mask asset name or path - needs to be boolean (0 or 1)')	
 
   args = parser.parse_args()
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
   if os.path.isfile(os.path.join(colab_folder,output_name + '_polygonList.txt')) is False:
     build_id_list(asset,id_field,colab_folder,output_name)
 
-  theropoda_run(asset,id_field,output_name,colab_folder,db,args.collection)
+  theropoda_run(asset,id_field,output_name,colab_folder,db,args.collection,args.lulc_custom_mask)
 
   start_date_trend, end_date_trend= args.start_date, args.end_date
   output_file_trends = f'{output_name}_trend_analysis.pq'
@@ -91,3 +92,4 @@ if __name__ == '__main__':
   df2conv.to_parquet(f'{output_name}_trend_analysis.parquet')
 
   shutil.rmtree(output_file_trends)  
+
