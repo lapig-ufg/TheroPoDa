@@ -105,7 +105,7 @@ This function needs a `geometry` object in the `ee.Feature()` formart and the ch
 
 """
 #Returns a NDVI time series (and other informations) by a target polygon
-def getTimeSeries(geometry,collection,bestEffort=False):
+def getTimeSeries(geometry,collection,lulc_custom_mask,bestEffort=False):
   
   """
   Retrieves NDVI time series data from Sentinel 2 imagery for a specified geometry.
@@ -244,32 +244,7 @@ def getTimeSeries(geometry,collection,bestEffort=False):
     
     year = ee.Algorithms.If(ee.Number.parse(orgDate.split('-').get(0)).lte(2024), ee.Number.parse(orgDate.split('-').get(0)),2024)
       
-    def setIndex(feat):
-        return feat.set('cd_id',1)
-    
-    states = (
-        ee.FeatureCollection("projects/ee-vieiramesquita/assets/BR_UF_2022")
-        .filter(ee.Filter.inList("SIGLA_UF", ["SC", "RS"]))
-        .map(setIndex)
-        .reduceToImage(**{"properties": ["cd_id"],"reducer": ee.Reducer.max()}
-        )
-        .gt(0)
-    )
-  
-    pantanal = (ee.FeatureCollection('users/vieiramesquita/lm_bioma_250')
-      .filter(ee.Filter.eq('Bioma','Pantanal'))
-      .reduceToImage(**{'properties': ['CD_Bioma'],'reducer':ee.Reducer.max()}).gt(0))
-
-    grassland_mask = ee.ImageCollection([states,pantanal]).mosaic()
-
-    mapbiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_coverage_v2')
-                    .select(ee.String('classification_').cat(ee.Number(year).toInt().format()))
-                    .clip(geometry))
-      
-    pasture_mapBiomas =  mapbiomas.eq(15)
-    grassland_mapBiomas =  mapbiomas.updateMask(grassland_mask).remap([11,12],[1,1],0)
-
-    main_mask = pasture_mapBiomas.add(grassland_mapBiomas.unmask()).gt(0)
+    main_mask = ee.Image(lulc_custom_mask)
     
     if collection == 'Landsat':
       
@@ -623,6 +598,7 @@ def run(asset,id_field,output_name,colab_folder,db,collection):
 
   logger.success(f'The average processing time was {round(pd.DataFrame(time_list).mean()[0],2)} seconds')
   logger.success(f'Processing finished. All the work took {round(time.time() - start_time,3)} seconds to complete')
+
 
 
 
