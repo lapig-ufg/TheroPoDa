@@ -72,12 +72,13 @@ uv pip install 'git+https://github.com/openlandmap/scikit-map#egg=scikit-map[ful
 | --end_date or -end        | End date baseline for the time series decomposition                                | 2025-01-01 |
 | --window or -w            | Size of the time series standadization window (Default is 15 - average of 15 days) | 15 |
 | --collection or -c        | The used satellite collection                                                      | Only "Landsat" or "Sentinel" (MODIS MOD13Q1 will be added soon) |
+| --mask or -m              | Choosed Earth Engine Image Mask Asset                                              | projects/ee-vieiramesquita/assets/MapBiomas_Pasture_S2_v2/Y2023 |
 
 If you don't know how to upload your vector data in Earth Engine, you can follow the tutorial [clicking this link.](https://developers.google.com/earth-engine/guides/table_upload)
 
 #### Command line example
 ```bash
-python main.py -a users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m -id ID_POINTS -o LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork -c Sentinel -start 2019-01-01 -end 2025-01-01 -w 15
+python main.py -a users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m -id ID_POINTS -o LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork_masked -c Sentinel -start 2019-01-01 -end 2025-01-01 -w 15 -m projects/ee-vieiramesquita/assets/MapBiomas_Pasture_S2_v2/Y2023
 ```
 ### Roadmap
 
