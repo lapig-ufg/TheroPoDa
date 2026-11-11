@@ -244,7 +244,7 @@ def getTimeSeries(geometry,collection,bestEffort=False):
     
     year = ee.Algorithms.If(ee.Number.parse(orgDate.split('-').get(0)).lte(2024), ee.Number.parse(orgDate.split('-').get(0)),2024)
     
-    pasture_mapBiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection10/mapbiomas_brazil_collection10_coverage_v2')
+    pasture_mapBiomas = (ee.Image('projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_coverage_v3')
                          .select(ee.String('classification_').cat(ee.Number(year).toInt().format()))
                          .eq(15)
                          .clip(ee.Feature(geometry).geometry()))
