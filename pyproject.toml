@@ -1,10 +1,14 @@
 [project]
 name = "theropoda"
-version = "2.1.0"
+version = "3.0.0"
 description = "Time Series Extraction for Polygonal Data and Trend Analysis using Google Earth Engine"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
+authors = [
+    { name = "Vinícius Vieira Mesquita", email = "vinicius.mesquita@ufg.br" },
+    { name = "Leandro Leal Parente", email = "leal.parente@gmail.com" },
+]
 dependencies = [
     "earthengine-api",
     "geopandas",
