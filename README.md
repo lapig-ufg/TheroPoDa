@@ -3,6 +3,9 @@
 # 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
 
 [![License: MIT](./docs/mit.svg)](./LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-00897b?logo=githubpages&logoColor=white)](https://lapig-ufg.github.io/TheroPoDa/)
+
+> **Documentation & Visual Examples:** [https://lapig-ufg.github.io/TheroPoDa/](https://lapig-ufg.github.io/TheroPoDa/)
 
 **TheroPoDa+** extracts cloud-masked median NDVI time series from **Sentinel-2** and **Landsat 8/9** in Google Earth Engine (GEE) for polygonal vector assets, stores incremental checkpoints in **SQLite**, applies seasonal gap-filling (`SeasConvFill`) and robust **STL + OLS** trend decomposition, and provides an **interactive Streamlit Dashboard** and **PyQt5 Desktop GUI**.
 
