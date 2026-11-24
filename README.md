@@ -1,4 +1,6 @@
-![TheroPoDa Logo](Logo.gif)
+<p align="center">
+  <img src="Logo.gif" alt="TheroPoDa Logo" width="100%" />
+</p>
 
 # 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
 
