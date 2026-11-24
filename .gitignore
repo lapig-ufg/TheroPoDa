@@ -140,6 +140,19 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# TheroPoDa runtime outputs & local state
+*.db
+*.db-shm
+*.db-wal
+*.parquet
+*_polygonList.txt
+*_errors_polygon.txt
+*_empty_polygon.txt
+.theropoda_last_run.json
+Testes/
+Thera/sheets/
+Thera/animations/
+
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -162,3 +175,16 @@ cython_debug/
 #.idea/
 
 site
+
+# TheroPoDa runtime outputs & local state
+*.db
+*.db-shm
+*.db-wal
+*.parquet
+*_polygonList.txt
+*_errors_polygon.txt
+*_empty_polygon.txt
+.theropoda_last_run.json
+Testes/
+Thera/sheets/
+Thera/animations/
