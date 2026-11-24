@@ -1,0 +1,26 @@
+[project]
+name = "theropoda"
+version = "2.1.0"
+description = "Time Series Extraction for Polygonal Data and Trend Analysis using Google Earth Engine"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "earthengine-api",
+    "geopandas",
+    "joblib",
+    "loguru",
+    "numexpr",
+    "pandas",
+    "psutil",
+    "pyarrow",
+    "python-dateutil",
+    "rasterio",
+    "scikit-learn",
+    "statsmodels",
+]
+
+[project.optional-dependencies]
+gui = ["PyQt5"]
+dashboard = ["streamlit", "plotly"]
+all = ["PyQt5", "streamlit", "plotly"]
