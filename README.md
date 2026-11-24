@@ -103,7 +103,7 @@ python3 main.py \
   -o LAPIG_Pasture_Grasslands \
   -start 2020-01-01 \
   -end 2026-01-01 \
-  -p mapbiomas-brazil \
+  -p ee-vieiramesquita \
   -m projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_coverage_v3 \
   -mc 15 11 12
 ```

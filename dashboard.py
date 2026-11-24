@@ -135,7 +135,7 @@ def _render_runner_tab(default_dir: str) -> None:
         window = c8.number_input("Janela em dias (-w)", min_value=1, max_value=60, value=15)
         n_cores = c9.number_input("Núcleos (-n)", min_value=1, max_value=64, value=12)
 
-        project = st.text_input("Projeto GEE (-p, opcional)", value="mapbiomas-brazil")
+        project = st.text_input("Projeto GEE (-p, opcional)", value="ee-vieiramesquita")
 
         st.markdown("**Máscara de Uso e Cobertura (opcional)**")
         m1, m2 = st.columns(2)
