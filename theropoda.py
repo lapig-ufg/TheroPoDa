@@ -153,13 +153,14 @@ def getTimeSeries(
         lulc_mask = build_ee_mask(mask_spec, img_year, geom)
         target_img = img.updateMask(lulc_mask) if lulc_mask is not None else img
 
+        img_id_col = "image_id" if id_field == "id" else "id"
         if collection == "Landsat":
             pixel_size = 30
             series = target_img.reduceRegion(reducers, geom, pixel_size, None, None, False, 1e13, 16)
             return (
                 ee.Feature(None)
                 .set(id_field, ee.Feature(geometry).get(id_field))
-                .set("id", ee.String(img.id()))
+                .set(img_id_col, ee.String(img.id()))
                 .set("date", org_date)
                 .set("satelite", img.get("satelite"))
                 .set("WRS_PATH", img.get("WRS_PATH"))
@@ -176,7 +177,7 @@ def getTimeSeries(
         return (
             ee.Feature(None)
             .set(id_field, ee.Feature(geometry).get(id_field))
-            .set("id", ee.String(img.id()))
+            .set(img_id_col, ee.String(img.id()))
             .set("date", org_date)
             .set("satelite", img.get("satelite"))
             .set("MGRS_TILE", img.get("MGRS_TILE"))
