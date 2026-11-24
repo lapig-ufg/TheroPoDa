@@ -109,7 +109,11 @@ def run(input_file, id_pol, dt_windows, season_size, field_id, output_file):
     columns = ["id_pol", "type"] + trend_cols + [f"d_{d}" for d in dates]
     result = pd.DataFrame(np.concatenate([ts_type, trend, ts], axis=-1)[0, :, :], columns=columns)
     result = result.round(8)
-    result.loc[:, "id_pol"] = id_pol if not isinstance(id_pol, (int, np.integer)) else int(id_pol)
+    if isinstance(id_pol, (int, np.integer)):
+        result["id_pol"] = int(id_pol)
+    else:
+        result["id_pol"] = result["id_pol"].astype(object)
+        result.loc[:, "id_pol"] = str(id_pol)
 
     result.to_parquet(output_file, partition_cols=["id_pol"])
     ttprint(f"Polygon {id_pol} saved in {output_file}")
