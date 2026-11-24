@@ -7,7 +7,7 @@
 **TheroPoDa+** extracts cloud-masked median NDVI time series from **Sentinel-2** and **Landsat 8/9** in Google Earth Engine (GEE) for polygonal vector assets, stores incremental checkpoints in **SQLite**, applies seasonal gap-filling (`SeasConvFill`) and robust **STL + OLS** trend decomposition, and provides an **interactive Streamlit Dashboard** and **PyQt5 Desktop GUI**.
 
 - **Author:** Vinícius Vieira Mesquita (`vinicius.mesquita@ufg.br`)
-- **Co-author:** Leandro Leal Parente (`leal.parente@gmail.com`)
+- **Co-author:** Leandro Leal Parente (`leandro.parente@opengeohub.org `)
 
 ---
 
