@@ -1,4 +1,4 @@
-![TheroPoDa Logo](Logo.jpg)
+![TheroPoDa Logo](Logo.gif)
 
 # 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
 
