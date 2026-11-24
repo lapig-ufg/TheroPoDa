@@ -44,6 +44,7 @@ def run_analysis(
     mask_classes: Optional[Sequence] = None,
     mask_start_year: Optional[int] = None,
     mask_band: Optional[str] = None,
+    timeout_seconds: int = 600,
 ) -> str:
     """Run the full TheroPoDa extraction, gap-filling, and trend analysis pipeline."""
     if output_folder:
@@ -86,6 +87,7 @@ def run_analysis(
         project=project,
         start_date=start_date,
         end_date=end_date,
+        timeout_seconds=timeout_seconds,
     )
 
     output_file_trends = f"{output_prefix}_trend_analysis.pq"
@@ -172,6 +174,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Explicit band name to use as a static mask from a multiband asset",
     )
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=int,
+        default=600,
+        help="Per-polygon GEE timeout in seconds before killing process and retrying bestEffort 30m (default: 600)",
+    )
     return parser
 
 
@@ -192,4 +201,5 @@ if __name__ == "__main__":
         mask_classes=parsed.mask_classes,
         mask_start_year=parsed.mask_start_year,
         mask_band=parsed.mask_band,
+        timeout_seconds=parsed.timeout,
     )

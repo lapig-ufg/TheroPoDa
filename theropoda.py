@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """TheroPoDa core extraction module for Google Earth Engine NDVI time series."""
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import multiprocessing
 import os
 import sqlite3
 import time
@@ -9,7 +11,6 @@ from typing import Any, Dict, Optional
 import ee
 import geopandas as gpd
 import pandas as pd
-from joblib import Parallel, delayed
 from loguru import logger
 from shapely.geometry import mapping
 
@@ -244,6 +245,40 @@ def build_time_series(
     return True, time_spent
 
 
+def _extract_worker_proc(result_queue, kwargs: dict) -> None:
+    """Run build_time_series inside a killable child process."""
+    try:
+        status, elapsed = build_time_series(**kwargs)
+        result_queue.put(("ok", status, elapsed))
+    except Exception as exc:
+        result_queue.put(("err", repr(exc), None))
+
+
+def _run_extract_with_timeout(timeout_seconds: int, kwargs: dict):
+    """Execute build_time_series in a subprocess, killing it if it exceeds timeout_seconds."""
+    ctx = multiprocessing.get_context("spawn" if os.name == "nt" else "fork")
+    result_queue = ctx.Queue(maxsize=1)
+    proc = ctx.Process(target=_extract_worker_proc, args=(result_queue, kwargs))
+    proc.start()
+    proc.join(timeout=timeout_seconds)
+
+    if proc.is_alive():
+        proc.terminate()
+        proc.join(timeout=5)
+        if proc.is_alive():
+            proc.kill()
+            proc.join(timeout=5)
+        raise TimeoutError(f"Extraction exceeded {timeout_seconds}s timeout and process was killed")
+
+    if result_queue.empty():
+        raise RuntimeError(f"Extraction process exited with code {proc.exitcode} without returning a result")
+
+    kind, val1, val2 = result_queue.get_nowait()
+    if kind == "err":
+        raise RuntimeError(val1)
+    return val1, val2
+
+
 def build_time_series_check(
     index: int,
     obj,
@@ -257,9 +292,9 @@ def build_time_series_check(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     local_geom: Optional[dict] = None,
+    timeout_seconds: int = 600,
 ):
-    """Check if polygon was already processed and run extraction with bestEffort fallback."""
-    init_ee(project)
+    """Check if polygon was already processed and run extraction with timeout + bestEffort fallback."""
     obj = _parse_poly_id(obj)
     db_file = outfile + ".db"
 
@@ -273,57 +308,41 @@ def build_time_series_check(
             logger.info(f"Object [{obj}] already in database. Skipping...")
             return {"errors": None, "empty": None, "time": 0}
 
-    errors = None
-    empty = None
-    elapsed = None
+    base_kwargs = dict(
+        index=index,
+        obj=obj,
+        id_field=id_field,
+        outfile=db_file,
+        asset=asset,
+        collection=collection,
+        mask_spec=mask_spec,
+        project=project,
+        start_date=start_date,
+        end_date=end_date,
+        local_geom=local_geom,
+    )
 
     try:
-        status, elapsed = build_time_series(
-            index,
-            obj,
-            id_field,
-            db_file,
-            asset,
-            collection,
-            bestEffort=False,
-            mask_spec=mask_spec,
-            project=project,
-            start_date=start_date,
-            end_date=end_date,
-            local_geom=local_geom,
-        )
+        status, elapsed = _run_extract_with_timeout(timeout_seconds, {**base_kwargs, "bestEffort": False})
         if status == "empty":
             logger.warning(f"Index {index} - Object [{obj}] has no valid pixels after mask/date filter. Skipping.")
             return {"errors": None, "empty": obj, "time": None}
         if status is None:
             return {"errors": "ignore", "empty": None, "time": "ignore"}
-    except Exception:
+        return {"errors": None, "empty": None, "time": elapsed}
+    except Exception as exc:
+        logger.warning(f"Index {index} - Request [{obj}] failed ({exc}). Trying bestEffort=True (30m)!")
         try:
-            logger.exception(f"Index {index} - Request [{obj}] failed. Trying bestEffort=True!")
-            status, elapsed = build_time_series(
-                index,
-                obj,
-                id_field,
-                db_file,
-                asset,
-                collection,
-                bestEffort=True,
-                mask_spec=mask_spec,
-                project=project,
-                start_date=start_date,
-                end_date=end_date,
-                local_geom=local_geom,
-            )
+            status, elapsed = _run_extract_with_timeout(timeout_seconds, {**base_kwargs, "bestEffort": True})
             if status == "empty":
                 logger.warning(f"Index {index} - Object [{obj}] empty even with bestEffort. Skipping.")
                 return {"errors": None, "empty": obj, "time": None}
             if status is None:
                 return {"errors": "ignore", "empty": None, "time": "ignore"}
-        except Exception:
-            logger.error(f"Index {index} - Request [{obj}] failed permanently. Sending to error list.")
-            errors = obj
-
-    return {"errors": errors, "empty": empty, "time": elapsed}
+            return {"errors": None, "empty": None, "time": elapsed}
+        except Exception as exc2:
+            logger.error(f"Index {index} - Request [{obj}] failed permanently ({exc2}). Sending to error list.")
+            return {"errors": obj, "empty": None, "time": None}
 
 
 def build_id_list(asset: str, id_field: str, output_folder: str, outname: str, project: Optional[str] = None) -> None:
@@ -356,6 +375,7 @@ def run(
     project: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    timeout_seconds: int = 600,
 ) -> None:
     """Coordinate parallel GEE NDVI extraction across all polygon IDs."""
     init_ee(project)
@@ -406,13 +426,16 @@ def run(
             start_date,
             end_date,
             local_geoms.get(obj) if local_geoms is not None else None,
+            timeout_seconds,
         )
         for idx, obj in enumerate(remaining_polygons)
     ]
 
-    infos = Parallel(n_jobs=int(n_cores), backend="multiprocessing")(
-        delayed(build_time_series_check)(*args) for args in worker_args
-    )
+    infos = []
+    with ThreadPoolExecutor(max_workers=int(n_cores)) as executor:
+        futures = [executor.submit(build_time_series_check, *args) for args in worker_args]
+        for fut in as_completed(futures):
+            infos.append(fut.result())
 
     time_list = [0] + [item["time"] for item in infos if item["time"] not in (None, "ignore")]
     errors_list = [item["errors"] for item in infos if item["errors"] not in (None, "ignore")]
