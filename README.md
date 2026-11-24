@@ -121,7 +121,7 @@ python3 gui.py
 | Flag | Long Flag | Required | Default | Description |
 |:---|:---|:---:|:---|:---|
 | `-a` | `--asset` | Yes | — | Earth Engine Vector Asset (`FeatureCollection`) |
-| `-id` | `--id_field` | Yes | — | Unique polygon ID column |
+| `-id` | `--id_field` | Yes | — | Unique polygon ID column (must have 1 unique value per feature) |
 | `-c` | `--collection` | Yes | — | `Sentinel` or `Landsat` |
 | `-o` | `--output_name` | Yes | — | Base output filename |
 | `-of` | `--output_folder` | No | `""` | Output directory |
@@ -152,7 +152,8 @@ python3 gui.py
 | [`gui.py`](gui.py) | PyQt5 desktop frontend | `TheroPoDaGUI`, `AnalysisThread` |
 
 ### Key Design Invariants
-1. **Lazy GEE Initialization:** `theropoda.init_ee(project)` is never executed on module import; it initializes lazily inside execution functions so `--help`, tests, and UIs work without active GEE sessions.
+1. **Unique Polygon IDs (`--id_field`):** Every feature in the input GEE Asset or local vector file must have a **strictly unique** value in `--id_field`. Duplicate IDs overwrite/merge geometry mappings and corrupt per-polygon checkpointing and trend aggregation. If your file lacks a unique ID column, create one beforehand (e.g. `gdf["ID_UNICO"] = range(1, len(gdf) + 1)`).
+2. **Lazy GEE Initialization:** `theropoda.init_ee(project)` is never executed on module import; it initializes lazily inside execution functions so `--help`, tests, and UIs work without active GEE sessions.
 2. **Dynamic Mask Year Clamping:** `inspect_mask_spec()` inspects `bandNames()` or `system:time_start` once before parallel workers start. During extraction, `clamped_year = clamp(img_year, min_year, max_year)` ensures out-of-range satellite years (e.g. `2025–2026` with maps up to `2024`) automatically use the nearest available map.
 3. **SQLite Schema & Resume:** Extraction writes to table `observations` (with WAL mode and `timeout=60`). Downstream readers (`main.py`, `trend_analysis.py`, `dashboard.py`) check `observations` and fall back to legacy `restoration`. Completed IDs are pre-filtered once in `theropoda.run()`.
 4. **Empty vs. Failed Polygons:** Polygons with zero valid pixels after cloud/LULC masking are logged to `*_empty_polygon.txt` without triggering `bestEffort=True`; only GEE exceptions retry with `bestEffort=True` and log to `*_errors_polygon.txt`.

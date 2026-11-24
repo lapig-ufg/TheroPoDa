@@ -67,6 +67,8 @@ wsl earthengine authenticate
 
 ## Quick CLI Example
 
+> **Important:** The column passed to `-id` / `--id_field` must contain **strictly unique values** (one unique ID per polygon/feature). If your shapefile or GeoPackage has repeated IDs across features, add a sequential unique ID column first (`gdf["ID_UNICO"] = range(1, len(gdf) + 1)`).
+
 ```bash
 # Local vector file (no GEE Asset upload required!)
 python3 main.py \
