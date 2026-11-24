@@ -127,11 +127,15 @@ class TheroPoDaGUI(QMainWindow):
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        self.asset_input = self._create_input_field(
-            "Earth Engine Vector Asset Path:",
-            "users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m",
-            layout,
-        )
+        asset_layout = QHBoxLayout()
+        self.asset_input = QLineEdit()
+        self.asset_input.setPlaceholderText("GEE Asset path or local file (.gpkg, .shp, .geojson, .parquet)")
+        browse_asset_btn = QPushButton("Browse File...")
+        browse_asset_btn.clicked.connect(self.select_vector_file)
+        layout.addWidget(QLabel("Vector Input (GEE Asset or Local File):"))
+        asset_layout.addWidget(self.asset_input)
+        asset_layout.addWidget(browse_asset_btn)
+        layout.addLayout(asset_layout)
         self.id_field_input = self._create_input_field("ID Field Name:", "e.g., ID_POINTS", layout)
         self.project_input = self._create_input_field(
             "Earth Engine Project ID (optional):", "e.g., ee-vieiramesquita", layout
@@ -225,6 +229,16 @@ class TheroPoDaGUI(QMainWindow):
         self.custom_mask_input.setEnabled(is_custom)
         self.mask_classes_input.setEnabled(not is_none)
         self.mask_start_year_input.setEnabled(is_custom)
+
+    def select_vector_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Local Vector File",
+            "",
+            "Vector Files (*.gpkg *.shp *.geojson *.json *.parquet *.geoparquet *.zip);;All Files (*)",
+        )
+        if file_path:
+            self.asset_input.setText(file_path)
 
     def select_output_folder(self):
         folder = QFileDialog.getExistingDirectory(

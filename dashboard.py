@@ -119,10 +119,14 @@ def _render_runner_tab(default_dir: str) -> None:
     with st.form("theropoda_runner_form"):
         c1, c2 = st.columns(2)
         asset = c1.text_input(
-            "Earth Engine Vector Asset (-a)",
+            "Vetor: GEE Asset OU arquivo local (.gpkg, .shp, .geojson, .parquet, .zip) (-a)",
             value="users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m",
         )
         id_field = c2.text_input("Coluna de ID (-id)", value="ID_POINTS")
+        uploaded_vector = st.file_uploader(
+            "Ou envie um arquivo vetorial local (opcional — substitui o campo acima se enviado)",
+            type=["gpkg", "geojson", "json", "parquet", "geoparquet", "zip"],
+        )
 
         c3, c4, c5 = st.columns(3)
         collection = c3.selectbox("Coleção (-c)", ["Sentinel", "Landsat"])
@@ -159,12 +163,19 @@ def _render_runner_tab(default_dir: str) -> None:
         norm_out_dir = normalize_path(output_folder) if output_folder.strip() else os.getcwd()
         os.makedirs(norm_out_dir, exist_ok=True)
 
+        if uploaded_vector is not None:
+            resolved_asset = os.path.join(norm_out_dir, uploaded_vector.name)
+            with open(resolved_asset, "wb") as uf:
+                uf.write(uploaded_vector.getbuffer())
+        else:
+            resolved_asset = normalize_path(asset)
+
         script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")
         cmd = [
             sys.executable,
             "-u",
             script_path,
-            "-a", asset.strip(),
+            "-a", resolved_asset,
             "-id", id_field.strip(),
             "-c", collection,
             "-o", output_name.strip(),
