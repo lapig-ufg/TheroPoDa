@@ -140,3 +140,13 @@ python3 gui.py
 python3 -m py_compile mask_resolver.py theropoda.py trend_analysis.py main.py gui.py dashboard.py thera_animator.py
 python3 main.py --help
 ```
+
+---
+
+## License & Authors
+
+Licensed under the [MIT License](./LICENSE).
+
+- **Vinícius Vieira Mesquita** — LAPIG / UFG (`vinicius.mesquita@ufg.br`)
+- **Leandro Leal Parente** — (`leal.parente@gmail.com`)
+

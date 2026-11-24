@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+title: "TheroPoDa+: Time Series Extraction for Polygonal Data and Trend Analysis"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+version: "3.0.0"
+license: MIT
+repository-code: "https://github.com/lapig-ufg/TheroPoDa"
+authors:
+  - family-names: "Mesquita"
+    given-names: "Vinícius Vieira"
+    email: "vinicius.mesquita@ufg.br"
+    affiliation: "LAPIG - Universidade Federal de Goiás (UFG)"
+  - family-names: "Parente"
+    given-names: "Leandro Leal"
+    email: "leal.parente@gmail.com"

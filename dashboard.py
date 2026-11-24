@@ -429,17 +429,17 @@ def main():
             c_left, c_right = st.columns(2)
             with c_left:
                 fig_hist = px.histogram(
-                    filtered, x="diff_trend", nbins=40, title="Distribuição de diff_trend (Δ Tendência STL)"
+                    filtered, x="trend_m", nbins=40, title="Distribuição de trend_m (Slope OLS)"
                 )
                 st.plotly_chart(fig_hist, use_container_width=True)
             with c_right:
                 fig_scatter = px.scatter(
                     filtered,
-                    x="diff_trend",
+                    x="trend_m",
                     y="trend_pv",
                     color="r2",
-                    hover_data=["id_pol", "trend_m", "r2"],
-                    title="Significância (trend_pv) vs. Variação (diff_trend)",
+                    hover_data=["id_pol", "trend_m", "diff_trend", "r2"],
+                    title="Significância (trend_pv) vs. Slope (trend_m)",
                 )
                 fig_scatter.add_hline(y=0.05, line_dash="dash", line_color="red")
                 st.plotly_chart(fig_scatter, use_container_width=True)
@@ -478,10 +478,16 @@ def main():
                 if obs_table:
                     cols_info = load_sqlite_query(selected_db, f"PRAGMA table_info({obs_table})")
                     col_names = cols_info["name"].tolist()
+                    standard_cols = {
+                        "id", "date", "satelite", "MGRS_TILE", "WRS_PATH", "WRS_ROW",
+                        "AREA_HA", "NDVI_median", "Pixel_Count", "Total_Pixels", "Pixel_Size",
+                    }
+                    custom_id_cols = [c for c in col_names if c not in standard_cols]
+                    default_id_col = custom_id_cols[0] if custom_id_cols else ("id_pol" if "id_pol" in col_names else col_names[0])
                     id_col = st.selectbox(
                         "Coluna de ID no SQLite",
                         options=col_names,
-                        index=col_names.index("id_pol") if "id_pol" in col_names else 0,
+                        index=col_names.index(default_id_col),
                     )
                     raw_df = load_sqlite_query(
                         selected_db,
@@ -512,11 +518,11 @@ def main():
                 ).fit()
 
                 fig = make_subplots(
-                    rows=4,
+                    rows=3,
                     cols=1,
                     shared_xaxes=True,
-                    vertical_spacing=0.05,
-                    subplot_titles=("Observed (NDVI Gap-Filled)", "Trend (STL + OLS)", "Season", "Resid"),
+                    vertical_spacing=0.06,
+                    subplot_titles=("Observed (NDVI Gap-Filled + Trend STL + OLS)", "Season", "Resid"),
                 )
                 if show_raw and not raw_df.empty:
                     fig.add_trace(
@@ -542,7 +548,6 @@ def main():
                         mode="lines",
                         name="Trend (STL)",
                         line=dict(color="#ff7f0e", width=2),
-                        showlegend=False,
                     ),
                     row=1,
                     col=1,
@@ -554,30 +559,13 @@ def main():
                         mode="lines",
                         name="Tendência OLS",
                         line=dict(dash="dash", width=2, color="crimson"),
-                        showlegend=False,
                     ),
                     row=1,
-                    col=1,
-                )
-                fig.add_trace(
-                    go.Scatter(x=ts_dates, y=stl_res.trend, mode="lines", name="Trend (STL)", line=dict(color="#ff7f0e", width=2)),
-                    row=2,
-                    col=1,
-                )
-                fig.add_trace(
-                    go.Scatter(
-                        x=ts_dates,
-                        y=ols_line,
-                        mode="lines",
-                        name="Tendência OLS",
-                        line=dict(dash="dash", width=2, color="crimson"),
-                    ),
-                    row=2,
                     col=1,
                 )
                 fig.add_trace(
                     go.Scatter(x=ts_dates, y=stl_res.seasonal, mode="lines", name="Season", line=dict(color="#1f77b4")),
-                    row=3,
+                    row=2,
                     col=1,
                 )
                 fig.add_trace(
@@ -588,19 +576,18 @@ def main():
                         name="Resid",
                         marker=dict(size=5, color="#1f77b4"),
                     ),
-                    row=4,
+                    row=3,
                     col=1,
                 )
-                fig.add_hline(y=0, line_dash="solid", line_color="black", line_width=1, row=4, col=1)
+                fig.add_hline(y=0, line_dash="solid", line_color="black", line_width=1, row=3, col=1)
 
                 fig.update_yaxes(title_text="NDVI", row=1, col=1)
-                fig.update_yaxes(title_text="Trend", row=2, col=1)
-                fig.update_yaxes(title_text="Season", row=3, col=1)
-                fig.update_yaxes(title_text="Resid", row=4, col=1)
-                fig.update_xaxes(title_text="Data", row=4, col=1)
+                fig.update_yaxes(title_text="Season", row=2, col=1)
+                fig.update_yaxes(title_text="Resid", row=3, col=1)
+                fig.update_xaxes(title_text="Data", row=3, col=1)
                 fig.update_layout(
                     title=f"Decomposição STL — Polígono {chosen_id} (period={season_size}, window≈{window_days}d)",
-                    height=820,
+                    height=700,
                     showlegend=True,
                 )
             else:
