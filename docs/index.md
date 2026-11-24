@@ -68,6 +68,16 @@ wsl earthengine authenticate
 ## Quick CLI Example
 
 ```bash
+# Local vector file (no GEE Asset upload required!)
+python3 main.py \
+  -a ./meus_talhoes.gpkg \
+  -id ID_TALHAO \
+  -c Sentinel \
+  -o TALHOES_S2_NDVI \
+  -start 2019-01-01 \
+  -end 2026-01-01
+
+# Or GEE Asset + Custom LULC Mask
 python3 main.py \
   -a users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m \
   -id ID_POINTS \

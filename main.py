@@ -128,7 +128,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="TheroPoDa v2 - Time Series Extraction from GEE, Gap Filling, and Trend Analysis."
     )
-    parser.add_argument("-a", "--asset", type=str, required=True, help="Earth Engine Vector Asset path")
+    parser.add_argument(
+        "-a",
+        "--asset",
+        type=str,
+        required=True,
+        help="Earth Engine Vector Asset path or local vector file (.gpkg, .shp, .geojson, .parquet, .zip)",
+    )
     parser.add_argument("-id", "--id_field", type=str, required=True, help="Unique polygon ID field name")
     parser.add_argument(
         "-c", "--collection", type=str, required=True, choices=["Sentinel", "Landsat"], help="Satellite collection"

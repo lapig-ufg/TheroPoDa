@@ -4,18 +4,21 @@
 import os
 import sqlite3
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import ee
+import geopandas as gpd
 import pandas as pd
 from joblib import Parallel, delayed
 from loguru import logger
+from shapely.geometry import mapping
 
 from mask_resolver import MaskSpec, build_ee_mask
 
 logger.add("log_do_.log", rotation="500 MB")
 
 TABLE_NAME = "observations"
+LOCAL_VECTOR_EXTS = {".shp", ".gpkg", ".geojson", ".json", ".fgb", ".parquet", ".geoparquet", ".zip"}
 _EE_INITIALIZED = False
 
 
@@ -38,6 +41,47 @@ def _parse_poly_id(raw_id):
         return int(text)
     except ValueError:
         return text
+
+
+def is_local_vector(asset: str) -> bool:
+    """Return True when asset points to a local vector file instead of a GEE Asset."""
+    if not asset:
+        return False
+    ext = os.path.splitext(asset.strip())[1].lower()
+    return os.path.isfile(asset) or ext in LOCAL_VECTOR_EXTS
+
+
+def _strip_z_coords(coords):
+    """Recursively drop Z coordinates from GeoJSON coordinate arrays."""
+    if not coords:
+        return coords
+    if isinstance(coords[0], (int, float)):
+        return [coords[0], coords[1]]
+    return [_strip_z_coords(c) for c in coords]
+
+
+def load_local_geometries(asset: str, id_field: str) -> Dict[Any, dict]:
+    """Load a local vector file (.shp, .gpkg, .geojson, .parquet, .zip) as EPSG:4326 GeoJSON dicts."""
+    ext = os.path.splitext(asset.strip())[1].lower()
+    if ext in (".parquet", ".geoparquet"):
+        gdf = gpd.read_parquet(asset)
+    else:
+        gdf = gpd.read_file(asset)
+
+    if id_field not in gdf.columns:
+        raise ValueError(f"ID field '{id_field}' not found in '{asset}'. Available columns: {list(gdf.columns)}")
+
+    if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
+        gdf = gdf.to_crs(epsg=4326)
+
+    gdf = gdf[gdf.geometry.notnull() & ~gdf.geometry.is_empty]
+    geoms: Dict[Any, dict] = {}
+    for _, row in gdf.iterrows():
+        poly_id = _parse_poly_id(row[id_field])
+        gj = mapping(row.geometry)
+        gj = {"type": gj["type"], "coordinates": _strip_z_coords(gj["coordinates"])}
+        geoms[poly_id] = gj
+    return geoms
 
 
 def getTimeSeries(
@@ -159,12 +203,16 @@ def build_time_series(
     project: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    local_geom: Optional[dict] = None,
 ):
     """Extract and write NDVI time series to SQLite for a single polygon."""
     init_ee(project)
-    samples = ee.FeatureCollection(asset).select(id_field)
     start_time_obj = time.time()
-    selected_sample = samples.filter(ee.Filter.eq(id_field, obj)).first()
+    if local_geom is not None:
+        selected_sample = ee.Feature(ee.Geometry(local_geom), {id_field: obj})
+    else:
+        samples = ee.FeatureCollection(asset).select(id_field)
+        selected_sample = samples.filter(ee.Filter.eq(id_field, obj)).first()
     fc_info = getTimeSeries(
         ee.Feature(selected_sample),
         collection,
@@ -207,6 +255,7 @@ def build_time_series_check(
     project: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    local_geom: Optional[dict] = None,
 ):
     """Check if polygon was already processed and run extraction with bestEffort fallback."""
     init_ee(project)
@@ -240,6 +289,7 @@ def build_time_series_check(
             project=project,
             start_date=start_date,
             end_date=end_date,
+            local_geom=local_geom,
         )
         if status == "empty":
             logger.warning(f"Index {index} - Object [{obj}] has no valid pixels after mask/date filter. Skipping.")
@@ -261,6 +311,7 @@ def build_time_series_check(
                 project=project,
                 start_date=start_date,
                 end_date=end_date,
+                local_geom=local_geom,
             )
             if status == "empty":
                 logger.warning(f"Index {index} - Object [{obj}] empty even with bestEffort. Skipping.")
@@ -275,14 +326,18 @@ def build_time_series_check(
 
 
 def build_id_list(asset: str, id_field: str, output_folder: str, outname: str, project: Optional[str] = None) -> None:
-    """Export sorted polygon IDs from an Earth Engine FeatureCollection to a text file."""
-    init_ee(project)
-    samples = ee.FeatureCollection(asset).select(id_field)
-    sample_size = int(samples.size().getInfo())
-    samples_list = samples.toList(50000 if sample_size < 50000 else sample_size)
+    """Export sorted polygon IDs from a GEE FeatureCollection or local vector file."""
     filename = os.path.join(output_folder, f"{outname}_polygonList.txt")
+    if is_local_vector(asset):
+        geoms = load_local_geometries(asset, id_field)
+        ids = sorted(geoms.keys(), key=str)
+    else:
+        init_ee(project)
+        samples = ee.FeatureCollection(asset).select(id_field)
+        sample_size = int(samples.size().getInfo())
+        samples_list = samples.toList(50000 if sample_size < 50000 else sample_size)
+        ids = samples_list.map(lambda feat: ee.Feature(feat).get(id_field)).sort().getInfo()
 
-    ids = samples_list.map(lambda feat: ee.Feature(feat).get(id_field)).sort().getInfo()
     with open(filename, "w", encoding="utf-8") as polygon_file:
         for polygon in ids:
             polygon_file.write(f"{polygon}\n")
@@ -323,6 +378,11 @@ def run(
                 except Exception:
                     continue
 
+    local_geoms: Optional[Dict[Any, dict]] = None
+    if is_local_vector(asset):
+        local_geoms = load_local_geometries(asset, id_field)
+        logger.info(f"Loaded {len(local_geoms)} local geometries from '{asset}' (no GEE Asset upload required).")
+
     remaining_polygons = [obj for obj in list_polygons if obj not in already_done]
     logger.info(
         f"Number of objects to process: {len(remaining_polygons)} "
@@ -332,7 +392,20 @@ def run(
         logger.info("Go take a coffee and watch a series... it will take a while!")
 
     worker_args = [
-        (idx, obj, id_field, output_prefix, asset, collection, False, mask_spec, project, start_date, end_date)
+        (
+            idx,
+            obj,
+            id_field,
+            output_prefix,
+            asset,
+            collection,
+            False,
+            mask_spec,
+            project,
+            start_date,
+            end_date,
+            local_geoms.get(obj) if local_geoms is not None else None,
+        )
         for idx, obj in enumerate(remaining_polygons)
     ]
 
