@@ -1,5 +1,5 @@
-site_name: "TheroPoDa Documentation"
-site_description: "Documentation for the TheroPoDa Project"
+site_name: "TheroPoDa+ v3 Documentation"
+site_description: "Time Series Extraction for Polygonal Data and Trend Analysis (GEE + STL + Streamlit)"
 site_author: "Vinícius Vieira Mesquita | Leandro Leal Parente"
 
 # Repository
@@ -7,7 +7,7 @@ repo_name: lapig-ufg/TheroPoDa
 repo_url: https://github.com/lapig-ufg/TheroPoDa
 
 # Copyright
-copyright: Copyright &copy; 2024 Vinícius Vieira Mesquita | Leandro Leal Parente
+copyright: Copyright &copy; 2023-2026 Vinícius Vieira Mesquita | Leandro Leal Parente
 
 # Configuration
 theme:
@@ -121,6 +121,10 @@ markdown_extensions:
 
 nav:
   - Home: "index.md"
+  - Dashboard & Thera: "dashboard.md"
+  - LULC Masks & CLI: "masks.md"
+  - Visual Examples: "examples.md"
   - Modules:
       - Theropoda: "theropoda.md"
       - Trend Analysis: "trend_analysis.md"
+      - Mask Resolver: "mask_resolver.md"

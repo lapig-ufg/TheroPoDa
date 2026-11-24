@@ -1,52 +1,81 @@
-![Vinícius Mesquita / DALEE - theropod, jurassic landscape, digital art, hight quality](assets/Logo.jpg)
+![TheroPoDa Logo](assets/Logo.jpg)
 
-#  **Time Series Extraction for Polygonal Data**
+# 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
 
-### Name
-- T(h)eroPoDa + - Time Series Extraction for Polygonal Data and Trend Analysis ⬛
+**TheroPoDa+** is an open-source toolkit for extracting cloud-masked median NDVI time series from **Sentinel-2** and **Landsat 8/9** in Google Earth Engine (GEE) across polygonal vector assets, storing incremental checkpoints in **SQLite** (`observations`), performing seasonal gap-filling (`SeasConvFill`) and **STL + OLS** trend analysis, and exploring results in an **interactive Streamlit Dashboard** or **PyQt5 Desktop GUI**.
 
-### Description
-- Toolkit created to extract Time Series information from Sentinel 2 🛰 data stored in Earth Engine, gap filling and trend analysis [![image](https://user-images.githubusercontent.com/13785909/209228496-9fe31adc-a7cb-47c3-b476-64d82541f139.png)](https://earthengine.google.com/)
+- **Author:** Vinícius Vieira Mesquita (`vinicius.mesquita@ufg.br`) — LAPIG / UFG
+- **Co-author:** Leandro Leal Parente (`leal.parente@gmail.com`)
+- **Version:** `3.0.0` | **License:** MIT
 
-### Author
-- Vinícius Vieira Mesquita - vinicius.mesquita@ufg.br (Main Theropoda)
-### Co-author
-- Leandro Leal Parente - leal.parente@gmail.com (Gap Filling and Trend Analysis implementation)
+---
 
-### Version
-- 1.1.0
+## Architecture & Data Flow
 
-### Requirements (installation order from top to bottom)
-- Python 3.10
-- GDAL
-- Rasterio 
-- Pandas
-- Geopandas
-- Scikit-learn
-- Joblib
-- Psutil
-- [scikit-map](https://github.com/openlandmap/scikit-map)
-- [Earthengine-api](https://developers.google.com/earth-engine/guides/python_install)
+```mermaid
+flowchart TD
+    subgraph GEE["1. Google Earth Engine Extraction"]
+        direction LR
+        ASSET["Vector Asset (Polygons)"] --> EXTR["theropoda.py (Parallel reduceRegion)"]
+        MASK["mask_resolver.py (LULC Mask + Year Clamping)"] --> EXTR
+        SAT["Sentinel-2 / Landsat 8-9"] --> EXTR
+    end
 
-### How to use
+    EXTR -->|"Incremental Checkpoint"| DB[("SQLite .db (table: observations)")]
 
-- In this version of TheroPoDa (1.1.0), you could extract a series of median NDVI from Sentinel 2 for a Feature Collection of polygons simplily by passing arguments to the python code exemplified below:
+    subgraph LOCAL["2. Local Time Series & Trend Analysis"]
+        direction LR
+        GF["trend_analysis.py (Pixel_used >= 70% + SeasConvFill)"] --> STL["STL Decomposition + OLS Regression"]
+        STL --> PQ["Parquet (_trend_analysis.parquet)"]
+    end
 
-| argument      | usage                                               | example  |
-|:-------------:|:--------------------------------------------------: |:---------|
-| --asset         | Choosed Earth Engine Vector Asset                   | users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m |
-| --id_field      | Vector column used as ID (use unique identifiers!) | ID_POINTS |
-| --output_name   | Output filename                                     | LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork |
+    DB --> GF
 
-If you don't know how to upload your vector data in Earth Engine, you can follow the tutorial [clicking this link.](https://developers.google.com/earth-engine/guides/table_upload)
+    subgraph UI["3. Interactive Interfaces"]
+        direction LR
+        DASH["dashboard.py (Streamlit Runner + STL + SQLite)"]
+        GUI["gui.py (PyQt5 Desktop App)"]
+        THERA["thera_animator.py (Mascot Monitor)"]
+        THERA --> DASH
+    end
 
-#### Command line example
-```bash
-python main.py --asset users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m --id_field ID_POINTS --output_name LAPIG_Pasture_S2_NDVI_Monitoring_FieldWork
+    DB --> DASH
+    PQ --> DASH
 ```
 
-### Roadmap
+---
 
-- Implement arguments to choose other zonal reducers (i.e. percentile, variance, etc.)
-- Implement arguments to choose other satellite data series (i.e. Landsat series, MODIS products)
-- Implement a visualization of the processed data (or samples of it)
+## Installation
+
+### Option A — Using `uv` (Recommended)
+
+```bash
+uv venv --python 3.10
+uv sync --all-extras
+uv run pip install 'git+https://github.com/openlandmap/scikit-map#egg=scikit-map[full]'
+uv run earthengine authenticate
+```
+
+### Option B — WSL (Ubuntu / Debian)
+
+```powershell
+wsl pip3 install --user --break-system-packages streamlit
+wsl earthengine authenticate
+```
+
+---
+
+## Quick CLI Example
+
+```bash
+python3 main.py \
+  -a users/vieiramesquita/LAPIG_FieldSamples/lapig_goias_fieldwork_2022_50m \
+  -id ID_POINTS \
+  -c Sentinel \
+  -o LAPIG_Pasture_S2_NDVI \
+  -start 2019-01-01 \
+  -end 2026-01-01 \
+  -p mapbiomas-brazil \
+  -m projects/mapbiomas-public/assets/brazil/lulc/collection11/mapbiomas_brazil_collection11_coverage_v3 \
+  -mc 15
+```
