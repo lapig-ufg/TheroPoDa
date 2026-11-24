@@ -14,13 +14,34 @@
 ## Architecture & Data Flow
 
 ```mermaid
-flowchart LR
-    EE["Google Earth Engine<br/>(Sentinel-2 / Landsat 8-9)"] -->|"Optional LULC Mask<br/>(auto year-clamping)"| EXT["theropoda.py<br/>Parallel reduceRegion"]
-    EXT -->|"Incremental checkpoint"| DB[("SQLite .db<br/>table: observations")]
-    DB -->|"Pixel_used >= 70%"| TR["trend_analysis.py<br/>SeasConvFill + STL + OLS"]
-    TR --> PQ["Parquet<br/>_trend_analysis.parquet"]
-    DB --> UI["dashboard.py (Streamlit)<br/>Runner + STL + SQLite Explorer"]
-    PQ --> UI
+flowchart TD
+    subgraph GEE["1. Google Earth Engine Extraction"]
+        direction LR
+        ASSET["Vector Asset (Polygons)"] --> EXTR["theropoda.py (Parallel reduceRegion)"]
+        MASK["mask_resolver.py (LULC Mask + Year Clamping)"] --> EXTR
+        SAT["Sentinel-2 / Landsat 8-9"] --> EXTR
+    end
+
+    EXTR -->|"Incremental Checkpoint"| DB[("SQLite .db (table: observations)")]
+
+    subgraph LOCAL["2. Local Time Series & Trend Analysis"]
+        direction LR
+        GF["trend_analysis.py (Pixel_used >= 70% + SeasConvFill)"] --> STL["STL Decomposition + OLS Regression"]
+        STL --> PQ["Parquet (_trend_analysis.parquet)"]
+    end
+
+    DB --> GF
+
+    subgraph UI["3. Interactive Interfaces"]
+        direction LR
+        DASH["dashboard.py (Streamlit Runner + STL + SQLite)"]
+        GUI["gui.py (PyQt5 Desktop App)"]
+        THERA["thera_animator.py (Mascot Monitor)"]
+        THERA --> DASH
+    end
+
+    DB --> DASH
+    PQ --> DASH
 ```
 
 ---
