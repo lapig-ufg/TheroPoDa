@@ -2,10 +2,12 @@
 """TheroPoDa core extraction module for Google Earth Engine NDVI time series."""
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 import multiprocessing
 import os
 import random
 import sqlite3
+import threading
 import time
 from typing import Any, Dict, Optional, Sequence
 
@@ -312,14 +314,56 @@ def _run_extract_with_timeout(timeout_seconds: int, kwargs: dict):
     return val1, val2
 
 
+class _AdaptiveConcurrencyLimiter:
+    """Thread-safe concurrency gate that halves max workers (e.g. 12 -> 6 -> 3 -> 1) on GEE 429 errors."""
+
+    def __init__(self, initial_limit: int, cooldown_seconds: float = 5.0):
+        self.limit = max(1, int(initial_limit))
+        self.cooldown_seconds = cooldown_seconds
+        self._active = 0
+        self._last_halve_ts = 0.0
+        self._cond = threading.Condition()
+
+    @contextmanager
+    def slot(self):
+        with self._cond:
+            while self._active >= self.limit:
+                self._cond.wait(timeout=1.0)
+            self._active += 1
+        try:
+            yield
+        finally:
+            with self._cond:
+                self._active -= 1
+                self._cond.notify_all()
+
+    def notify_rate_limit(self) -> int:
+        with self._cond:
+            now = time.monotonic()
+            if self.limit > 1 and (now - self._last_halve_ts) >= self.cooldown_seconds:
+                new_limit = max(1, self.limit // 2)
+                logger.warning(
+                    f"GEE concurrency limit detected! Reducing active workers: {self.limit} -> {new_limit}"
+                )
+                self.limit = new_limit
+                self._last_halve_ts = now
+                self._cond.notify_all()
+            return self.limit
+
+
 def _is_rate_limit_error(exc: Exception) -> bool:
     """Detect Earth Engine concurrency/quota throttling errors."""
     msg = str(exc).lower()
     return any(tok in msg for tok in ("too many requests", "concurrency limit", "429", "quota"))
 
 
-def _run_with_rate_limit_backoff(timeout_seconds: int, kwargs: dict, delays=(10, 25, 60)):
-    """Run extraction with exponential backoff on GEE 429 concurrency errors."""
+def _run_with_rate_limit_backoff(
+    timeout_seconds: int,
+    kwargs: dict,
+    delays=(10, 25, 60),
+    limiter: Optional[_AdaptiveConcurrencyLimiter] = None,
+):
+    """Run extraction with adaptive concurrency halving and exponential backoff on GEE 429 errors."""
     for attempt, delay in enumerate((0, *delays)):
         if delay > 0:
             jitter = random.uniform(0.5, 3.0)
@@ -329,10 +373,16 @@ def _run_with_rate_limit_backoff(timeout_seconds: int, kwargs: dict, delays=(10,
             )
             time.sleep(delay + jitter)
         try:
+            if limiter is not None:
+                with limiter.slot():
+                    return _run_extract_with_timeout(timeout_seconds, kwargs)
             return _run_extract_with_timeout(timeout_seconds, kwargs)
         except Exception as exc:
-            if _is_rate_limit_error(exc) and attempt < len(delays):
-                continue
+            if _is_rate_limit_error(exc):
+                if limiter is not None:
+                    limiter.notify_rate_limit()
+                if attempt < len(delays):
+                    continue
             raise
 
 
@@ -351,6 +401,7 @@ def build_time_series_check(
     local_geom: Optional[dict] = None,
     timeout_seconds: int = 600,
     indices: Sequence[str] = ("NDVI",),
+    limiter: Optional[_AdaptiveConcurrencyLimiter] = None,
 ):
     """Check if polygon was already processed and run extraction with backoff, timeout, and bestEffort fallback."""
     obj = _parse_poly_id(obj)
@@ -382,7 +433,9 @@ def build_time_series_check(
     )
 
     try:
-        status, elapsed = _run_with_rate_limit_backoff(timeout_seconds, {**base_kwargs, "bestEffort": False})
+        status, elapsed = _run_with_rate_limit_backoff(
+            timeout_seconds, {**base_kwargs, "bestEffort": False}, limiter=limiter
+        )
         if status == "empty":
             logger.warning(f"Index {index} - Object [{obj}] has no valid pixels after mask/date filter. Skipping.")
             return {"errors": None, "empty": obj, "time": None}
@@ -392,7 +445,9 @@ def build_time_series_check(
     except Exception as exc:
         logger.warning(f"Index {index} - Request [{obj}] failed ({exc}). Trying bestEffort=True (30m)!")
         try:
-            status, elapsed = _run_with_rate_limit_backoff(timeout_seconds, {**base_kwargs, "bestEffort": True})
+            status, elapsed = _run_with_rate_limit_backoff(
+                timeout_seconds, {**base_kwargs, "bestEffort": True}, limiter=limiter
+            )
             if status == "empty":
                 logger.warning(f"Index {index} - Object [{obj}] empty even with bestEffort. Skipping.")
                 return {"errors": None, "empty": obj, "time": None}
@@ -472,6 +527,7 @@ def run(
     if len(remaining_polygons) > 1000:
         logger.info("Go take a coffee and watch a series... it will take a while!")
 
+    limiter = _AdaptiveConcurrencyLimiter(initial_limit=int(n_cores))
     worker_args = [
         (
             idx,
@@ -488,6 +544,7 @@ def run(
             local_geoms.get(obj) if local_geoms is not None else None,
             timeout_seconds,
             indices,
+            limiter,
         )
         for idx, obj in enumerate(remaining_polygons)
     ]
