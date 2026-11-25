@@ -20,7 +20,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import STL
 import streamlit as st
-import streamlit.components.v1 as components
 
 from theropoda.animator import (
     STATE_LABELS,
@@ -284,11 +283,11 @@ def _render_runner_tab(default_dir: str) -> None:
         st.rerun()
 
     ctrl_col1, ctrl_col2 = st.columns(2)
-    if ctrl_col1.button("⏹️ Parar Processamento", use_container_width=True):
+    if ctrl_col1.button("⏹️ Parar Processamento", width="stretch"):
         _stop_process_tree(st.session_state.get("runner_proc"), st.session_state.get("runner_pid"))
         st.warning("Sinal de interrupção enviado para o processo e seus workers.")
         st.rerun()
-    if ctrl_col2.button("🗑️ Limpar Arquivos Gerados", use_container_width=True):
+    if ctrl_col2.button("🗑️ Limpar Arquivos Gerados", width="stretch"):
         removed = _clean_generated_files(output_folder, output_name)
         for key in ("runner_proc", "runner_pid", "runner_log", "runner_cmd"):
             st.session_state.pop(key, None)
@@ -346,7 +345,7 @@ def _render_live_log() -> None:
         with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
         escaped = html.escape("".join(lines[-120:]))
-        components.html(
+        st.iframe(
             f"""
             <pre id="log-box" style="
                 height: 340px;
@@ -425,7 +424,7 @@ def _render_thera_sidebar(active_tab: str, thera_override: str) -> None:
 
     sprites = get_cached_thera_sprites()
     if sprites:
-        components.html(build_thera_canvas_html(sprites, thera_state, size=220), height=260)
+        st.iframe(build_thera_canvas_html(sprites, thera_state, size=220), height=260)
 
 
 def main():
@@ -517,7 +516,7 @@ def main():
                 fig_hist = px.histogram(
                     filtered, x="trend_m", nbins=40, title="Distribuição de trend_m (Slope OLS)"
                 )
-                st.plotly_chart(fig_hist, use_container_width=True)
+                st.plotly_chart(fig_hist, width="stretch")
             with c_right:
                 fig_scatter = px.scatter(
                     filtered,
@@ -528,10 +527,10 @@ def main():
                     title="Significância (trend_pv) vs. Slope (trend_m)",
                 )
                 fig_scatter.add_hline(y=0.05, line_dash="dash", line_color="red")
-                st.plotly_chart(fig_scatter, use_container_width=True)
+                st.plotly_chart(fig_scatter, width="stretch")
 
             st.subheader(f"Tabela de Resultados ({len(filtered)} registros)")
-            st.dataframe(filtered[meta_cols], use_container_width=True, height=400)
+            st.dataframe(filtered[meta_cols], width="stretch", height=400)
             st.download_button(
                 "Baixar tabela filtrada (CSV)",
                 data=filtered[meta_cols].to_csv(index=False).encode("utf-8"),
@@ -708,7 +707,7 @@ def main():
                 )
                 fig.update_layout(title=f"Série Temporal NDVI — Polígono {chosen_id}", height=500)
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     elif active_tab == nav_options[3]:
         if not has_db:
@@ -726,7 +725,7 @@ def main():
                 query += f" LIMIT {int(limit)}"
                 try:
                     db_df = load_sqlite_query(selected_db, query)
-                    st.dataframe(db_df, use_container_width=True, height=450)
+                    st.dataframe(db_df, width="stretch", height=450)
                     st.download_button(
                         "Exportar consulta (CSV)",
                         data=db_df.to_csv(index=False).encode("utf-8"),
