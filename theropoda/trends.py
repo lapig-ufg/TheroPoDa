@@ -25,7 +25,7 @@ def extract_ts(df, dt_windows, value_col: str = "NDVI_median"):
 
 
 def gapfill(ts, dates, season_size):
-    """Fill gaps in the time series using SeasConvFill."""
+    """Fill internal gaps in the time series using SeasConvFill."""
     seasconv = SeasConvFill(season_size=season_size)
     ts = seasconv._gapfill(ts)
     trim = 10 if ts.shape[2] > 10 else 0
@@ -82,7 +82,7 @@ def sm_trend(ts, season_size, seasonal_smooth):
 
 
 def run(input_file, id_pol, dt_windows, season_size, field_id, output_file, value_col: str = "NDVI_median", index_name: str = None):
-    """Execute gap filling and trend analysis for a single polygon ID and spectral index."""
+    """Execute gap filling and trend analysis strictly over the polygon's observed date span."""
     with sqlite3.connect(f"file:{input_file}?mode=ro", uri=True) as con:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         table_name = "observations" if "observations" in tables else "restoration"
@@ -94,11 +94,38 @@ def run(input_file, id_pol, dt_windows, season_size, field_id, output_file, valu
 
     df.loc[:, "date"] = pd.to_datetime(df["date"], errors="coerce")
 
-    ts, dates = extract_ts(df, dt_windows, value_col=value_col)
-    ts, dates = gapfill(ts, dates, season_size)
+    ts_raw, dates_raw = extract_ts(df, dt_windows, value_col=value_col)
+    full_trim = 10 if ts_raw.shape[2] > 10 else 0
+    full_dates = dates_raw[full_trim:]
+
+    valid_mask = ~np.isnan(ts_raw[0, 0, :])
+    if not valid_mask.any():
+        logger.warning(f"Polygon {id_pol} ({index_name or value_col}) has no valid observations (>=70% pixels). Skipping.")
+        return None
+
+    first_idx = int(np.argmax(valid_mask))
+    last_idx = int(len(valid_mask) - 1 - np.argmax(valid_mask[::-1]))
+    sub_ts = ts_raw[:, :, first_idx : last_idx + 1]
+    sub_dates = dates_raw[first_idx : last_idx + 1]
+
+    # Need at least 2 seasonal cycles (24 months for 15-day windows) after SeasConvFill trim
+    sub_filled, sub_dates_filled = gapfill(sub_ts, sub_dates, season_size)
+    if sub_filled.shape[2] < 2 * season_size:
+        logger.warning(
+            f"Polygon {id_pol} ({index_name or value_col}) span too short for STL "
+            f"({sub_filled.shape[2]} < {2 * season_size} steps). Skipping."
+        )
+        return None
 
     seasonal_smooth = season_size + 2 if (season_size + 2) % 2 == 1 else season_size + 3
-    trend, trend_cols = sm_trend(ts, season_size, seasonal_smooth)
+    trend, trend_cols = sm_trend(sub_filled, season_size, seasonal_smooth)
+
+    # Place filled sub-series back onto the global date grid without extrapolating outside [first_idx, last_idx]
+    full_ts = np.full((1, 1, len(full_dates)), np.nan, dtype=float)
+    date_to_pos = {d: pos for pos, d in enumerate(full_dates)}
+    for local_i, d_str in enumerate(sub_dates_filled):
+        if d_str in date_to_pos:
+            full_ts[0, 0, date_to_pos[d_str]] = sub_filled[0, 0, local_i]
 
     try:
         numeric_id = int(id_pol)
@@ -106,8 +133,8 @@ def run(input_file, id_pol, dt_windows, season_size, field_id, output_file, valu
     except (TypeError, ValueError):
         ts_type = np.array([[[0, 1]]])
 
-    columns = ["id_pol", "type"] + trend_cols + [f"d_{d}" for d in dates]
-    result = pd.DataFrame(np.concatenate([ts_type, trend, ts], axis=-1)[0, :, :], columns=columns)
+    columns = ["id_pol", "type"] + trend_cols + [f"d_{d}" for d in full_dates]
+    result = pd.DataFrame(np.concatenate([ts_type, trend, full_ts], axis=-1)[0, :, :], columns=columns)
     result = result.round(8)
     if isinstance(id_pol, (int, np.integer)):
         result["id_pol"] = int(id_pol)

@@ -597,18 +597,22 @@ def main():
                             raw_val_col = median_cols[0] if median_cols else "NDVI_median"
 
             show_raw = st.checkbox("Sobrepor observações brutas (.db) no painel Observed", value=True, disabled=raw_df.empty)
-            x_norm = np.arange(len(ts_vals)) / max(1, len(ts_vals))
+            valid_mask = ~np.isnan(ts_vals)
+            plot_dates = ts_dates[valid_mask]
+            plot_vals = ts_vals[valid_mask]
+
+            x_norm = np.arange(len(plot_vals)) / max(1, len(plot_vals))
             ols_line = row["intercept_m"] + row["trend_m"] * x_norm
 
-            # Infer season_size from median date step (matches trend_analysis.py)
-            diffs = np.diff(ts_dates).astype("timedelta64[D]").astype(int)
+            # Infer season_size from median date step (matches theropoda/trends.py)
+            diffs = np.diff(plot_dates).astype("timedelta64[D]").astype(int) if len(plot_dates) > 1 else np.array([15])
             window_days = int(np.median(diffs)) if len(diffs) > 0 and np.median(diffs) > 0 else 15
             season_size = max(3, round(365 / window_days))
             seasonal_smooth = season_size + 2 if (season_size + 2) % 2 == 1 else season_size + 3
 
-            if len(ts_vals) >= 2 * season_size and not np.isnan(ts_vals).any():
+            if len(plot_vals) >= 2 * season_size:
                 stl_res = STL(
-                    ts_vals,
+                    plot_vals,
                     period=season_size,
                     seasonal=seasonal_smooth,
                     trend=(2 * season_size) + 1,
@@ -635,13 +639,13 @@ def main():
                         col=1,
                     )
                 fig.add_trace(
-                    go.Scatter(x=ts_dates, y=ts_vals, mode="lines", name="Observed", line=dict(color="#1f77b4")),
+                    go.Scatter(x=plot_dates, y=plot_vals, mode="lines", name="Observed", line=dict(color="#1f77b4")),
                     row=1,
                     col=1,
                 )
                 fig.add_trace(
                     go.Scatter(
-                        x=ts_dates,
+                        x=plot_dates,
                         y=stl_res.trend,
                         mode="lines",
                         name="Trend (STL)",
@@ -652,7 +656,7 @@ def main():
                 )
                 fig.add_trace(
                     go.Scatter(
-                        x=ts_dates,
+                        x=plot_dates,
                         y=ols_line,
                         mode="lines",
                         name="Tendência OLS",
@@ -662,13 +666,13 @@ def main():
                     col=1,
                 )
                 fig.add_trace(
-                    go.Scatter(x=ts_dates, y=stl_res.seasonal, mode="lines", name="Season", line=dict(color="#1f77b4")),
+                    go.Scatter(x=plot_dates, y=stl_res.seasonal, mode="lines", name="Season", line=dict(color="#1f77b4")),
                     row=2,
                     col=1,
                 )
                 fig.add_trace(
                     go.Scatter(
-                        x=ts_dates,
+                        x=plot_dates,
                         y=stl_res.resid,
                         mode="markers",
                         name="Resid",
@@ -690,15 +694,15 @@ def main():
                 )
             else:
                 st.warning(
-                    f"Série muito curta ou com valores ausentes para decomposição STL (n={len(ts_vals)}, mínimo={2 * season_size})."
+                    f"Série muito curta para decomposição STL (n={len(plot_vals)}, mínimo={2 * season_size})."
                 )
                 fig = go.Figure()
                 fig.add_trace(
-                    go.Scatter(x=ts_dates, y=ts_vals, mode="lines+markers", name="Série Padronizada + Gap-Filled")
+                    go.Scatter(x=plot_dates, y=plot_vals, mode="lines+markers", name="Série Padronizada + Gap-Filled")
                 )
                 fig.add_trace(
                     go.Scatter(
-                        x=ts_dates,
+                        x=plot_dates,
                         y=ols_line,
                         mode="lines",
                         name="Tendência OLS",
