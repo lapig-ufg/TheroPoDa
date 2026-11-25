@@ -161,6 +161,13 @@ class TheroPoDaGUI(QMainWindow):
         self.collection_combo.addItems(["Sentinel", "Landsat"])
         layout.addWidget(self.collection_combo)
 
+        self.indices_input = self._create_input_field(
+            "Spectral Indices (comma-separated: NDVI, EVI, SAVI, NDMI, NDWI, NBR, BSI, GNDVI, PSRI):",
+            "NDVI",
+            layout,
+        )
+        self.indices_input.setText("NDVI")
+
         # Mask configuration
         layout.addWidget(QLabel("LULC Mask Mode:"))
         self.mask_combo = QComboBox()
@@ -320,6 +327,7 @@ class TheroPoDaGUI(QMainWindow):
             "mask": mask_val,
             "mask_classes": [classes_raw] if classes_raw else None,
             "mask_start_year": mask_start_year,
+            "indices": [self.indices_input.text().strip() or "NDVI"],
         }
 
         self.analysis_thread = AnalysisThread(params)

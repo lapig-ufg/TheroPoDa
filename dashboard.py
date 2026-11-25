@@ -28,6 +28,7 @@ from theropoda.animator import (
     load_thera_sprites,
     resolve_thera_state,
 )
+from theropoda.indices import ALL_INDICES, INDEX_PRESETS
 
 _ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
 st.set_page_config(
@@ -141,6 +142,13 @@ def _render_runner_tab(default_dir: str) -> None:
 
         project = st.text_input("Projeto GEE (-p, opcional)", value="ee-vieiramesquita")
 
+        selected_indices = st.multiselect(
+            "Índices Espectrais (-i)",
+            options=ALL_INDICES,
+            default=["NDVI"],
+            help="Sentinel-2 aplica fator de escala 0.0001; Landsat 8/9 aplica 0.0000275 - 0.2. PSRI é exclusivo do Sentinel-2.",
+        )
+
         st.markdown("**Máscara de Uso e Cobertura (opcional)**")
         m1, m2 = st.columns(2)
         mask_mode = m1.selectbox(
@@ -187,6 +195,8 @@ def _render_runner_tab(default_dir: str) -> None:
         ]
         if project.strip():
             cmd.extend(["-p", project.strip()])
+        if selected_indices:
+            cmd.extend(["-i", *selected_indices])
 
         if mask_mode == "Asset customizado" and custom_mask.strip():
             cmd.extend(["-m", custom_mask.strip()])
@@ -415,13 +425,19 @@ def main():
         if df_trend is None:
             st.info("Selecione um arquivo `*_trend_analysis.parquet` na barra lateral ou execute o pipeline na aba anterior.")
         else:
-            meta_cols = [c for c in df_trend.columns if not c.startswith("d_")]
+            df_view = df_trend
+            if "index_name" in df_trend.columns:
+                avail_indices = sorted(df_trend["index_name"].dropna().unique().tolist())
+                chosen_idx = st.selectbox("Índice Espectral", avail_indices, key="tab_overview_idx")
+                df_view = df_trend[df_trend["index_name"] == chosen_idx]
+
+            meta_cols = [c for c in df_view.columns if not c.startswith("d_")]
 
             col1, col2, col3, col4 = st.columns(4)
-            sig_pos = int(((df_trend["trend_m"] > 0) & (df_trend["trend_pv"] < 0.05)).sum())
-            sig_neg = int(((df_trend["trend_m"] < 0) & (df_trend["trend_pv"] < 0.05)).sum())
-            col1.metric("Polígonos", len(df_trend))
-            col2.metric("Tendência Média (trend_m)", f"{df_trend['trend_m'].mean():.4f}")
+            sig_pos = int(((df_view["trend_m"] > 0) & (df_view["trend_pv"] < 0.05)).sum())
+            sig_neg = int(((df_view["trend_m"] < 0) & (df_view["trend_pv"] < 0.05)).sum())
+            col1.metric("Polígonos", len(df_view))
+            col2.metric("Tendência Média (trend_m)", f"{df_view['trend_m'].mean():.4f}")
             col3.metric("Ganho Significativo (p < 0.05)", sig_pos)
             col4.metric("Perda Significativa (p < 0.05)", sig_neg)
 
@@ -431,7 +447,7 @@ def main():
             min_r2 = f2.slider("R² mínimo", 0.0, 1.0, 0.0, 0.05)
             trend_dir = f3.selectbox("Direção", ["Todas", "Positiva (trend_m > 0)", "Negativa (trend_m < 0)"])
 
-            filtered = df_trend[(df_trend["trend_pv"] <= max_pv) & (df_trend["r2"] >= min_r2)]
+            filtered = df_view[(df_view["trend_pv"] <= max_pv) & (df_view["r2"] >= min_r2)]
             if trend_dir.startswith("Positiva"):
                 filtered = filtered[filtered["trend_m"] > 0]
             elif trend_dir.startswith("Negativa"):
@@ -469,10 +485,17 @@ def main():
             st.info("Selecione um arquivo `*_trend_analysis.parquet` para visualizar séries temporais.")
         else:
             date_cols = [c for c in df_trend.columns if c.startswith("d_")]
-            poly_ids = df_trend["id_pol"].tolist()
+            df_ts = df_trend
+            active_idx = "NDVI"
+            if "index_name" in df_trend.columns:
+                avail_indices = sorted(df_trend["index_name"].dropna().unique().tolist())
+                active_idx = st.selectbox("Índice Espectral", avail_indices, key="tab_ts_idx")
+                df_ts = df_trend[df_trend["index_name"] == active_idx]
+
+            poly_ids = df_ts["id_pol"].tolist()
             chosen_id = st.selectbox("Selecione o Polígono (id_pol)", poly_ids)
 
-            row = df_trend[df_trend["id_pol"] == chosen_id].iloc[0]
+            row = df_ts[df_ts["id_pol"] == chosen_id].iloc[0]
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("trend_m", f"{row['trend_m']:.5f}")
             m2.metric("trend_pv", f"{row['trend_pv']:.5f}")
@@ -483,6 +506,7 @@ def main():
             ts_vals = row[date_cols].to_numpy(dtype=float)
 
             raw_df = pd.DataFrame()
+            raw_val_col = f"{active_idx}_median"
             if has_db:
                 tables = load_sqlite_tables(selected_db)
                 obs_table = "observations" if "observations" in tables else ("restoration" if "restoration" in tables else None)
@@ -490,10 +514,12 @@ def main():
                     cols_info = load_sqlite_query(selected_db, f"PRAGMA table_info({obs_table})")
                     col_names = cols_info["name"].tolist()
                     standard_cols = {
-                        "id", "date", "satelite", "MGRS_TILE", "WRS_PATH", "WRS_ROW",
-                        "AREA_HA", "NDVI_median", "Pixel_Count", "Total_Pixels", "Pixel_Size",
+                        "id", "image_id", "date", "satelite", "MGRS_TILE", "WRS_PATH", "WRS_ROW",
+                        "AREA_HA", "Pixel_Count", "Total_Pixels", "Pixel_Size",
                     }
-                    custom_id_cols = [c for c in col_names if c not in standard_cols]
+                    custom_id_cols = [
+                        c for c in col_names if c not in standard_cols and not c.endswith("_median")
+                    ]
                     default_id_col = custom_id_cols[0] if custom_id_cols else ("id_pol" if "id_pol" in col_names else col_names[0])
                     id_col = st.selectbox(
                         "Coluna de ID no SQLite",
@@ -508,6 +534,9 @@ def main():
                     )
                     if not raw_df.empty:
                         raw_df["date"] = pd.to_datetime(raw_df["date"])
+                        if raw_val_col not in raw_df.columns:
+                            median_cols = [c for c in raw_df.columns if c.endswith("_median")]
+                            raw_val_col = median_cols[0] if median_cols else "NDVI_median"
 
             show_raw = st.checkbox("Sobrepor observações brutas (.db) no painel Observed", value=True, disabled=raw_df.empty)
             x_norm = np.arange(len(ts_vals)) / max(1, len(ts_vals))
@@ -533,13 +562,13 @@ def main():
                     cols=1,
                     shared_xaxes=True,
                     vertical_spacing=0.06,
-                    subplot_titles=("Observed (NDVI Gap-Filled + Trend STL + OLS)", "Season", "Resid"),
+                    subplot_titles=(f"Observed ({active_idx} Gap-Filled + Trend STL + OLS)", "Season", "Resid"),
                 )
-                if show_raw and not raw_df.empty:
+                if show_raw and not raw_df.empty and raw_val_col in raw_df.columns:
                     fig.add_trace(
                         go.Scatter(
                             x=raw_df["date"],
-                            y=raw_df["NDVI_median"],
+                            y=raw_df[raw_val_col],
                             mode="markers",
                             name="Observações Brutas (.db)",
                             marker=dict(size=4, opacity=0.45, color="#7f7f7f"),
@@ -592,7 +621,7 @@ def main():
                 )
                 fig.add_hline(y=0, line_dash="solid", line_color="black", line_width=1, row=3, col=1)
 
-                fig.update_yaxes(title_text="NDVI", row=1, col=1)
+                fig.update_yaxes(title_text=active_idx, row=1, col=1)
                 fig.update_yaxes(title_text="Season", row=2, col=1)
                 fig.update_yaxes(title_text="Resid", row=3, col=1)
                 fig.update_xaxes(title_text="Data", row=3, col=1)
