@@ -115,8 +115,9 @@ class TheroPoDaGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("TheroPoDa v2 - Time Series & Trend Analysis")
-        if os.path.exists("icon.ico"):
-            self.setWindowIcon(QIcon("icon.ico"))
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         self.setGeometry(100, 100, 780, 620)
         self.analysis_thread = None
         self.dashboard_proc = None
