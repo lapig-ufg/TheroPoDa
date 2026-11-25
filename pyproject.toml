@@ -1,6 +1,6 @@
 [project]
 name = "theropoda"
-version = "3.1.0"
+version = "3.1.1"
 description = "Time Series Extraction for Polygonal Data and Trend Analysis using Google Earth Engine"
 readme = "README.md"
 requires-python = ">=3.10"
