@@ -16,6 +16,7 @@ from loguru import logger
 from skmap import parallel
 from skmap.misc import date_range, ttprint
 
+from theropoda.indices import ALL_INDICES, parse_indices_arg
 from theropoda.masks import inspect_mask_spec
 from theropoda.extractor import build_id_list, init_ee, run as theropoda_run
 from theropoda.trends import run as trend_run
@@ -45,11 +46,13 @@ def run_analysis(
     mask_start_year: Optional[int] = None,
     mask_band: Optional[str] = None,
     timeout_seconds: int = 600,
+    indices: Optional[Sequence[str]] = None,
 ) -> str:
     """Run the full TheroPoDa extraction, gap-filling, and trend analysis pipeline."""
     if output_folder:
         os.makedirs(output_folder, exist_ok=True)
 
+    eff_indices = parse_indices_arg(indices, collection=collection)
     init_ee(project)
 
     mask_spec = inspect_mask_spec(
@@ -88,6 +91,7 @@ def run_analysis(
         start_date=start_date,
         end_date=end_date,
         timeout_seconds=timeout_seconds,
+        indices=eff_indices,
     )
 
     output_file_trends = f"{output_prefix}_trend_analysis.pq"
@@ -109,12 +113,26 @@ def run_analysis(
     dt_days = list(date_range(start_date, end_date, date_unit="days", date_step=eff_window, ignore_29feb=True))
     season_size = max(3, round(365 / eff_window))
 
+    multi_index = len(eff_indices) > 1
     job_args = [
-        (db_path, r[id_field], dt_days, season_size, id_field, output_file_trends)
+        (
+            db_path,
+            r[id_field],
+            dt_days,
+            season_size,
+            id_field,
+            output_file_trends,
+            f"{idx_name}_median",
+            idx_name if multi_index else None,
+        )
+        for idx_name in eff_indices
         for _, r in idx.iterrows()
     ]
 
-    ttprint(f"Starting trend analysis on {len(job_args)} polygons (window={eff_window}d, season_size={season_size})")
+    ttprint(
+        f"Starting trend analysis on {len(idx)} polygons x {len(eff_indices)} indices "
+        f"({eff_indices}, window={eff_window}d, season_size={season_size})"
+    )
     for _ in parallel.job(trend_run, job_args, joblib_args={"backend": "multiprocessing"}):
         continue
 
@@ -181,6 +199,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=600,
         help="Per-polygon GEE timeout in seconds before killing process and retrying bestEffort 30m (default: 600)",
     )
+    parser.add_argument(
+        "-i",
+        "--indices",
+        nargs="+",
+        default=["NDVI"],
+        help=f"Spectral index preset(s) to extract and analyze (default: NDVI). Available: {', '.join(ALL_INDICES)}",
+    )
     return parser
 
 
@@ -202,4 +227,5 @@ if __name__ == "__main__":
         mask_start_year=parsed.mask_start_year,
         mask_band=parsed.mask_band,
         timeout_seconds=parsed.timeout,
+        indices=parsed.indices,
     )

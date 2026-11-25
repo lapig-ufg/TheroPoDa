@@ -2,7 +2,7 @@
   <img src="assets/Logo.gif" alt="TheroPoDa Logo" width="100%" />
 </p>
 
-# 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
+# 🦖 T(h)eroPoDa+ v3.1 — Time Series Extraction for Polygonal Data & Trend Analysis
 
 [![License: MIT](./docs/mit.svg)](./LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-00897b?logo=githubpages&logoColor=white)](https://lapig-ufg.github.io/TheroPoDa/)
@@ -134,6 +134,8 @@ python3 gui.py
 | `-p` | `--project` | No | `None` | Google Cloud / Earth Engine project ID |
 | `-m` | `--mask` | No | `None` | GEE `Image`/`ImageCollection` asset or preset (`mapbiomas-pasture`, `mapbiomas-pasture-grasslands`) |
 | `-mc` | `--mask-classes` | No | `None` | Class ID(s) to keep (e.g. `15 11 12` or `15,11,12`) |
+| `-t` | `--timeout` | No | `600` | Per-polygon GEE timeout in seconds before killing process and retrying 30 m |
+| `-i` | `--indices` | No | `NDVI` | Spectral index preset(s): `NDVI`, `EVI`, `SAVI`, `NDMI`, `NDWI`, `NBR`, `BSI`, `GNDVI`, `PSRI` (Sentinel-2 only) |
 | — | `--mask-start-year` | No | `None` | First year for multiband masks whose band names lack years |
 | — | `--mask-band` | No | `None` | Explicit band name for static single-band extraction |
 
@@ -150,6 +152,7 @@ python3 gui.py
 | [`gui.py`](gui.py) | PyQt5 desktop frontend | `TheroPoDaGUI`, `AnalysisThread` |
 | [`theropoda/extractor.py`](theropoda/extractor.py) | GEE NDVI extraction, local vectors & SQLite checkpointing | `init_ee(project)`, `getTimeSeries(...)`, `build_id_list(...)`, `run(...)` |
 | [`theropoda/masks.py`](theropoda/masks.py) | Dynamic GEE mask inspection & year clamping | `inspect_mask_spec(...)`, `parse_year_bands(...)`, `build_ee_mask(...)` |
+| [`theropoda/indices.py`](theropoda/indices.py) | 9 spectral index presets with scaled reflectance | `INDEX_PRESETS`, `parse_indices_arg(...)`, `compute_ee_indices(...)` |
 | [`theropoda/trends.py`](theropoda/trends.py) | Window aggregation, `SeasConvFill`, `STL`, `OLS` | `extract_ts(...)`, `gapfill(...)`, `sm_trend(...)`, `run(...)` |
 | [`theropoda/animator.py`](theropoda/animator.py) | State machine & GIF loader for `assets/thera/` | `load_thera_sprites()`, `resolve_thera_state(...)`, `count_log_errors(...)` |
 | [`assets/`](assets/) | Banner `Logo.gif`, app icons, and 9 Thera GIF animations | `Logo.gif`, `icon.ico`, `thera/*.gif` |
@@ -173,6 +176,12 @@ python3 main.py --help
 ---
 
 ## Changelog
+
+### v3.1.0 (2026-11)
+- **Spectral Index Presets & Multi-Index Extraction (`theropoda/indices.py`):** Added 9 index presets (`NDVI`, `EVI`, `SAVI`, `NDMI`, `NDWI`, `NBR`, `BSI`, `GNDVI`, and Sentinel-2 `PSRI`) via `-i` / `--indices`, applying Sentinel-2 reflectance scaling (`* 0.0001`) and Landsat C02 L2 scaling (`* 0.0000275 - 0.2`) before computing indices.
+- **Multi-Index Trend Analysis & Dashboard:** Multiple selected indices are stored together in SQLite (`<IDX>_median`), decomposed independently in `theropoda/trends.py` (with `index_name` partitioning), and selectable in `dashboard.py` and `gui.py`.
+- **Resilient Process Timeout (`-t` / `--timeout`):** Added 600 s per-polygon subprocess timeout with automatic termination and `bestEffort=True` (30 m) fallback.
+- **Clean Package Layout:** Reorganized core modules under `theropoda/` and media under `assets/`, removing 13k+ unused vendored files.
 
 ### v3.0.0 (2026-11)
 - **Local Vector Support (No GEE Upload Required):** `-a` / `--asset` now accepts local `.gpkg`, `.shp`, `.geojson`, `.parquet`, and `.zip` files directly via `geopandas` (`is_local_vector` / `load_local_geometries`), with upload support in the Streamlit Dashboard and file picker in `gui.py`.

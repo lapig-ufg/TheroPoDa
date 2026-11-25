@@ -12,13 +12,13 @@ from loguru import logger
 logger.add("trend_log_do_.log", rotation="500 MB")
 
 
-def extract_ts(df, dt_windows):
-    """Extract median NDVI time series over standardized temporal windows."""
+def extract_ts(df, dt_windows, value_col: str = "NDVI_median"):
+    """Extract median spectral index time series over standardized temporal windows."""
     ts, dates = [], []
 
     for dt1, dt2 in dt_windows:
         df_dt = df.loc[(df["date"] >= dt1) & (df["date"] <= dt2)]
-        ts.append(df_dt[df_dt["Pixel_used"] >= 70]["NDVI_median"].mean())
+        ts.append(df_dt[df_dt["Pixel_used"] >= 70][value_col].mean())
         dates.append((dt2 - relativedelta(days=2)).strftime("%Y-%m-%d"))
 
     return np.stack([np.stack([ts])]), dates
@@ -81,8 +81,8 @@ def sm_trend(ts, season_size, seasonal_smooth):
     return np.stack([np.stack(result)]), sm_cols
 
 
-def run(input_file, id_pol, dt_windows, season_size, field_id, output_file):
-    """Execute gap filling and trend analysis for a single polygon ID."""
+def run(input_file, id_pol, dt_windows, season_size, field_id, output_file, value_col: str = "NDVI_median", index_name: str = None):
+    """Execute gap filling and trend analysis for a single polygon ID and spectral index."""
     with sqlite3.connect(f"file:{input_file}?mode=ro", uri=True) as con:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         table_name = "observations" if "observations" in tables else "restoration"
@@ -94,7 +94,7 @@ def run(input_file, id_pol, dt_windows, season_size, field_id, output_file):
 
     df.loc[:, "date"] = pd.to_datetime(df["date"], errors="coerce")
 
-    ts, dates = extract_ts(df, dt_windows)
+    ts, dates = extract_ts(df, dt_windows, value_col=value_col)
     ts, dates = gapfill(ts, dates, season_size)
 
     seasonal_smooth = season_size + 2 if (season_size + 2) % 2 == 1 else season_size + 3
@@ -115,6 +115,10 @@ def run(input_file, id_pol, dt_windows, season_size, field_id, output_file):
         result["id_pol"] = result["id_pol"].astype(object)
         result.loc[:, "id_pol"] = str(id_pol)
 
-    result.to_parquet(output_file, partition_cols=["id_pol"])
-    ttprint(f"Polygon {id_pol} saved in {output_file}")
+    if index_name:
+        result.insert(1, "index_name", index_name)
+        result.to_parquet(output_file, partition_cols=["index_name", "id_pol"])
+    else:
+        result.to_parquet(output_file, partition_cols=["id_pol"])
+    ttprint(f"Polygon {id_pol} ({index_name or value_col}) saved in {output_file}")
     return id_pol

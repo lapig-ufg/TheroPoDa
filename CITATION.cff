@@ -2,7 +2,7 @@ cff-version: 1.2.0
 title: "TheroPoDa+: Time Series Extraction for Polygonal Data and Trend Analysis"
 message: "If you use this software, please cite it using the metadata from this file."
 type: software
-version: "3.0.0"
+version: "3.1.0"
 license: MIT
 repository-code: "https://github.com/lapig-ufg/TheroPoDa"
 authors:

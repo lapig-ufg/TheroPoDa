@@ -6,7 +6,7 @@ import multiprocessing
 import os
 import sqlite3
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 import ee
 import geopandas as gpd
@@ -14,6 +14,7 @@ import pandas as pd
 from loguru import logger
 from shapely.geometry import mapping
 
+from theropoda.indices import compute_ee_indices, parse_indices_arg
 from theropoda.masks import MaskSpec, build_ee_mask
 
 logger.add("log_do_.log", rotation="500 MB")
@@ -93,8 +94,11 @@ def getTimeSeries(
     mask_spec: Optional[MaskSpec] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    indices: Sequence[str] = ("NDVI",),
 ):
-    """Retrieve NDVI time series data from Sentinel-2 or Landsat 8/9 for a geometry."""
+    """Retrieve spectral index time series data from Sentinel-2 or Landsat 8/9 for a geometry."""
+    eff_indices = parse_indices_arg(indices, collection=collection)
+    primary_idx = eff_indices[0]
 
     def maskEdges(img):
         return img.updateMask(img.select("B8A").mask().updateMask(img.select("B9").mask()))
@@ -103,9 +107,17 @@ def getTimeSeries(
         sat_name = ee.String(img.get("SPACECRAFT_ID"))
         mask_exp = "(b('QA_PIXEL') == 21824 || b('QA_PIXEL') == 21952)"
         cloud_mask = img.expression(mask_exp).add(img.gt(0)).select([0], ["QA"])
-        red_nir = img.select(["SR_B5", "SR_B4"], ["RED", "NIR"]).multiply(0.0000275).add(-0.2)
-        ndvi = red_nir.updateMask(cloud_mask).normalizedDifference(["RED", "NIR"]).select([0], ["NDVI"])
-        return img.addBands([ndvi, ee.Image.constant(1).rename(["full"])], None, True).set(
+        scaled = (
+            img.select(
+                ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"],
+                ["BLUE", "GREEN", "RED", "NIR", "SWIR1", "SWIR2"],
+            )
+            .multiply(0.0000275)
+            .add(-0.2)
+            .updateMask(cloud_mask)
+        )
+        idx_img = compute_ee_indices(scaled, eff_indices)
+        return img.addBands([idx_img, ee.Image.constant(1).rename(["full"])], None, True).set(
             {"system:time_start": img.get("system:time_start"), "satelite": sat_name}
         )
 
@@ -113,8 +125,16 @@ def getTimeSeries(
         sat_name = ee.String(img.get("SPACECRAFT_NAME"))
         mask = img.select("cs").gte(0.5)
         bad_values_filter = img.select("B8").gte(0)
-        ndvi = img.updateMask(mask.multiply(bad_values_filter)).normalizedDifference(["B8", "B4"]).select([0], ["NDVI"])
-        return img.addBands([ndvi, ee.Image.constant(1).rename(["full"])], None, True).set(
+        scaled = (
+            img.select(
+                ["B2", "B3", "B4", "B6", "B8", "B11", "B12"],
+                ["BLUE", "GREEN", "RED", "RED_EDGE2", "NIR", "SWIR1", "SWIR2"],
+            )
+            .multiply(0.0001)
+            .updateMask(mask.multiply(bad_values_filter))
+        )
+        idx_img = compute_ee_indices(scaled, eff_indices)
+        return img.addBands([idx_img, ee.Image.constant(1).rename(["full"])], None, True).set(
             {"system:time_start": img.get("system:time_start"), "satelite": sat_name}
         )
 
@@ -158,7 +178,8 @@ def getTimeSeries(
         if collection == "Landsat":
             pixel_size = 30
             series = target_img.reduceRegion(reducers, geom, pixel_size, None, None, False, 1e13, 16)
-            return (
+            series_dict = ee.Dictionary(series)
+            feat = (
                 ee.Feature(None)
                 .set(id_field, ee.Feature(geometry).get(id_field))
                 .set(img_id_col, ee.String(img.id()))
@@ -167,15 +188,18 @@ def getTimeSeries(
                 .set("WRS_PATH", img.get("WRS_PATH"))
                 .set("WRS_ROW", img.get("WRS_ROW"))
                 .set("AREA_HA", ee.Feature(geometry).area(1).divide(10000))
-                .set("NDVI_median", ee.Number(ee.Dictionary(series).get("NDVI_median")))
-                .set("Pixel_Count", ee.Number(ee.Dictionary(series).get("NDVI_count")))
-                .set("Total_Pixels", ee.Number(ee.Dictionary(series).get("full_count")))
+                .set("Pixel_Count", ee.Number(series_dict.get(f"{primary_idx}_count")))
+                .set("Total_Pixels", ee.Number(series_dict.get("full_count")))
                 .set("Pixel_Size", pixel_size)
             )
+            for idx in eff_indices:
+                feat = feat.set(f"{idx}_median", ee.Number(series_dict.get(f"{idx}_median")))
+            return feat
 
         pixel_size = 30 if bestEffort else 10
         series = target_img.reduceRegion(reducers, geom, pixel_size, None, None, False, 1e13, 16)
-        return (
+        series_dict = ee.Dictionary(series)
+        feat = (
             ee.Feature(None)
             .set(id_field, ee.Feature(geometry).get(id_field))
             .set(img_id_col, ee.String(img.id()))
@@ -183,14 +207,16 @@ def getTimeSeries(
             .set("satelite", img.get("satelite"))
             .set("MGRS_TILE", img.get("MGRS_TILE"))
             .set("AREA_HA", ee.Feature(geometry).area(1).divide(10000))
-            .set("NDVI_median", ee.Number(ee.Dictionary(series).get("NDVI_median")))
-            .set("Pixel_Count", ee.Number(ee.Dictionary(series).get("NDVI_count")))
-            .set("Total_Pixels", ee.Number(ee.Dictionary(series).get("full_count")))
+            .set("Pixel_Count", ee.Number(series_dict.get(f"{primary_idx}_count")))
+            .set("Total_Pixels", ee.Number(series_dict.get("full_count")))
             .set("Pixel_Size", pixel_size)
         )
+        for idx in eff_indices:
+            feat = feat.set(f"{idx}_median", ee.Number(series_dict.get(f"{idx}_median")))
+        return feat
 
     img_col = select_collection(collection)
-    return ee.FeatureCollection(img_col.map(reduceData)).filter(ee.Filter.notNull(["NDVI_median"]))
+    return ee.FeatureCollection(img_col.map(reduceData)).filter(ee.Filter.notNull([f"{primary_idx}_median"]))
 
 
 def build_time_series(
@@ -206,9 +232,11 @@ def build_time_series(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     local_geom: Optional[dict] = None,
+    indices: Sequence[str] = ("NDVI",),
 ):
-    """Extract and write NDVI time series to SQLite for a single polygon."""
+    """Extract and write spectral index time series to SQLite for a single polygon."""
     init_ee(project)
+    eff_indices = parse_indices_arg(indices, collection=collection)
     start_time_obj = time.time()
     if local_geom is not None:
         selected_sample = ee.Feature(ee.Geometry(local_geom), {id_field: obj})
@@ -223,6 +251,7 @@ def build_time_series(
         mask_spec=mask_spec,
         start_date=start_date,
         end_date=end_date,
+        indices=eff_indices,
     ).getInfo()
     point_series = [feat["properties"] for feat in fc_info.get("features", [])]
 
@@ -231,7 +260,10 @@ def build_time_series(
 
     df = pd.DataFrame(point_series)
     df["AREA_HA"] = df["AREA_HA"].round(decimals=4)
-    df["NDVI_median"] = df["NDVI_median"].round(decimals=4)
+    for idx in eff_indices:
+        col = f"{idx}_median"
+        if col in df.columns:
+            df[col] = df[col].round(decimals=4)
     df["date"] = pd.to_datetime(df["date"])
 
     with sqlite3.connect(outfile, timeout=60) as conn:
@@ -293,6 +325,7 @@ def build_time_series_check(
     end_date: Optional[str] = None,
     local_geom: Optional[dict] = None,
     timeout_seconds: int = 600,
+    indices: Sequence[str] = ("NDVI",),
 ):
     """Check if polygon was already processed and run extraction with timeout + bestEffort fallback."""
     obj = _parse_poly_id(obj)
@@ -320,6 +353,7 @@ def build_time_series_check(
         start_date=start_date,
         end_date=end_date,
         local_geom=local_geom,
+        indices=indices,
     )
 
     try:
@@ -376,6 +410,7 @@ def run(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     timeout_seconds: int = 600,
+    indices: Sequence[str] = ("NDVI",),
 ) -> None:
     """Coordinate parallel GEE NDVI extraction across all polygon IDs."""
     init_ee(project)
@@ -427,6 +462,7 @@ def run(
             end_date,
             local_geoms.get(obj) if local_geoms is not None else None,
             timeout_seconds,
+            indices,
         )
         for idx, obj in enumerate(remaining_polygons)
     ]

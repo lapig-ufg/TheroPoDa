@@ -2,7 +2,7 @@
   <img src="assets/Logo.gif" alt="TheroPoDa Logo" width="100%" />
 </p>
 
-# 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
+# 🦖 T(h)eroPoDa+ v3.1 — Time Series Extraction for Polygonal Data & Trend Analysis
 
 **TheroPoDa+** is an open-source toolkit for extracting cloud-masked median NDVI time series from **Sentinel-2** and **Landsat 8/9** in Google Earth Engine (GEE) across polygonal vector assets, storing incremental checkpoints in **SQLite** (`observations`), performing seasonal gap-filling (`SeasConvFill`) and **STL + OLS** trend analysis, and exploring results in an **interactive Streamlit Dashboard** or **PyQt5 Desktop GUI**.
 
