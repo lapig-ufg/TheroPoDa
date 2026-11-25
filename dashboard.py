@@ -21,7 +21,7 @@ from statsmodels.tsa.seasonal import STL
 import streamlit as st
 import streamlit.components.v1 as components
 
-from thera_animator import (
+from theropoda.animator import (
     STATE_LABELS,
     build_thera_canvas_html,
     count_log_errors,
@@ -29,7 +29,7 @@ from thera_animator import (
     resolve_thera_state,
 )
 
-_ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
+_ICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
 st.set_page_config(
     page_title="TheroPoDa Dashboard",
     page_icon=_ICON_PATH if os.path.exists(_ICON_PATH) else "🦖",

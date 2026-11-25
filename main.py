@@ -16,9 +16,9 @@ from loguru import logger
 from skmap import parallel
 from skmap.misc import date_range, ttprint
 
-from mask_resolver import inspect_mask_spec
-from theropoda import build_id_list, init_ee, run as theropoda_run
-from trend_analysis import run as trend_run
+from theropoda.masks import inspect_mask_spec
+from theropoda.extractor import build_id_list, init_ee, run as theropoda_run
+from theropoda.trends import run as trend_run
 
 
 def _resolve_window(collection: str, window: Optional[int]) -> int:

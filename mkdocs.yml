@@ -12,7 +12,6 @@ copyright: Copyright &copy; 2023-2026 Vinícius Vieira Mesquita | Leandro Leal P
 # Configuration
 theme:
   name: material
-  custom_dir: docs/material/overrides
   features:
     - announce.dismiss
     - content.action.edit
@@ -53,21 +52,13 @@ theme:
     text: Roboto
     code: Roboto Mono
   favicon: assets/favicon.png
-  icon:
-    logo: logo
 
 # Plugins
 plugins:
-  - blog
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - minify:
       minify_html: true
-
-# Hooks
-hooks:
-  - docs/material/overrides/hooks/shortcodes.py
-  - docs/material/overrides/hooks/translations.py
 
 # Extensions
 markdown_extensions:

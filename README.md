@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Logo.gif" alt="TheroPoDa Logo" width="100%" />
+  <img src="assets/Logo.gif" alt="TheroPoDa Logo" width="100%" />
 </p>
 
 # 🦖 T(h)eroPoDa+ v3 — Time Series Extraction for Polygonal Data & Trend Analysis
@@ -146,12 +146,14 @@ python3 gui.py
 | File | Responsibility | Key Entrypoints / Symbols |
 |:---|:---|:---|
 | [`main.py`](main.py) | CLI parser & pipeline orchestrator | `run_analysis(...)`, `build_arg_parser()` |
-| [`theropoda.py`](theropoda.py) | GEE NDVI extraction & SQLite checkpointing | `init_ee(project)`, `getTimeSeries(...)`, `build_id_list(...)`, `run(...)` |
-| [`mask_resolver.py`](mask_resolver.py) | Dynamic GEE mask inspection & year clamping | `inspect_mask_spec(...)`, `parse_year_bands(...)`, `build_ee_mask(...)` |
-| [`trend_analysis.py`](trend_analysis.py) | Window aggregation, `SeasConvFill`, `STL`, `OLS` | `extract_ts(...)`, `gapfill(...)`, `sm_trend(...)`, `run(...)` |
-| [`dashboard.py`](dashboard.py) | Streamlit runner, STL 4-panel viewer & SQLite explorer | `main()`, `_render_runner_tab()`, `_render_live_log()`, `_render_thera_sidebar()` |
-| [`thera_animator.py`](thera_animator.py) | State machine & GIF loader for `Thera/animations_web/` | `load_thera_sprites()`, `resolve_thera_state(...)`, `count_log_errors(...)` |
+| [`dashboard.py`](dashboard.py) | Streamlit runner, STL 3-panel viewer & SQLite explorer | `main()`, `_render_runner_tab()`, `_render_live_log()`, `_render_thera_sidebar()` |
 | [`gui.py`](gui.py) | PyQt5 desktop frontend | `TheroPoDaGUI`, `AnalysisThread` |
+| [`theropoda/extractor.py`](theropoda/extractor.py) | GEE NDVI extraction, local vectors & SQLite checkpointing | `init_ee(project)`, `getTimeSeries(...)`, `build_id_list(...)`, `run(...)` |
+| [`theropoda/masks.py`](theropoda/masks.py) | Dynamic GEE mask inspection & year clamping | `inspect_mask_spec(...)`, `parse_year_bands(...)`, `build_ee_mask(...)` |
+| [`theropoda/trends.py`](theropoda/trends.py) | Window aggregation, `SeasConvFill`, `STL`, `OLS` | `extract_ts(...)`, `gapfill(...)`, `sm_trend(...)`, `run(...)` |
+| [`theropoda/animator.py`](theropoda/animator.py) | State machine & GIF loader for `assets/thera/` | `load_thera_sprites()`, `resolve_thera_state(...)`, `count_log_errors(...)` |
+| [`assets/`](assets/) | Banner `Logo.gif`, app icons, and 9 Thera GIF animations | `Logo.gif`, `icon.ico`, `thera/*.gif` |
+| [`docs/`](docs/) | MkDocs Material documentation & visual examples | `index.md`, `dashboard.md`, `masks.md`, `examples.md` |
 
 ### Key Design Invariants
 1. **Unique Polygon IDs (`--id_field`):** Every feature in the input GEE Asset or local vector file must have a **strictly unique** value in `--id_field`. Duplicate IDs overwrite/merge geometry mappings and corrupt per-polygon checkpointing and trend aggregation. If your file lacks a unique ID column, create one beforehand (e.g. `gdf["ID_UNICO"] = range(1, len(gdf) + 1)`).
