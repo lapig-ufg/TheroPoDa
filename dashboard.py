@@ -491,13 +491,19 @@ def main():
 
             meta_cols = [c for c in df_view.columns if not c.startswith("d_")]
 
-            col1, col2, col3, col4 = st.columns(4)
+            has_intercept = "intercept_m" in df_view.columns
+            if has_intercept:
+                col1, col2, col3, col4, col5 = st.columns(5)
+            else:
+                col1, col2, col3, col4 = st.columns(4)
             sig_pos = int(((df_view["trend_m"] > 0) & (df_view["trend_pv"] < 0.05)).sum())
             sig_neg = int(((df_view["trend_m"] < 0) & (df_view["trend_pv"] < 0.05)).sum())
             col1.metric("Polígonos", len(df_view))
             col2.metric("Tendência Média (trend_m)", f"{df_view['trend_m'].mean():.4f}")
             col3.metric("Ganho Significativo (p < 0.05)", sig_pos)
             col4.metric("Perda Significativa (p < 0.05)", sig_neg)
+            if has_intercept:
+                col5.metric("Intercepto Médio (intercept_m)", f"{df_view['intercept_m'].mean():.4f}")
 
             st.subheader("Filtros da Tabela")
             f1, f2, f3 = st.columns(3)
@@ -518,12 +524,16 @@ def main():
                 )
                 st.plotly_chart(fig_hist, width="stretch")
             with c_right:
+                hover_cols = ["id_pol", "trend_m", "diff_trend", "r2"]
+                for extra_col in ("intercept_m", "intercept_pv"):
+                    if extra_col in filtered.columns:
+                        hover_cols.append(extra_col)
                 fig_scatter = px.scatter(
                     filtered,
                     x="trend_m",
                     y="trend_pv",
                     color="r2",
-                    hover_data=["id_pol", "trend_m", "diff_trend", "r2"],
+                    hover_data=hover_cols,
                     title="Significância (trend_pv) vs. Slope (trend_m)",
                 )
                 fig_scatter.add_hline(y=0.05, line_dash="dash", line_color="red")
@@ -559,6 +569,12 @@ def main():
             m2.metric("trend_pv", f"{row['trend_pv']:.5f}")
             m3.metric("r2", f"{row['r2']:.4f}")
             m4.metric("diff_trend", f"{row['diff_trend']:.5f}")
+            if "intercept_m" in row.index:
+                i1, i2, i3, i4 = st.columns(4)
+                i1.metric("intercept_m", f"{row['intercept_m']:.5f}")
+                i2.metric("intercept_sd", f"{row['intercept_sd']:.5f}")
+                i3.metric("intercept_tv", f"{row['intercept_tv']:.4f}")
+                i4.metric("intercept_pv", f"{row['intercept_pv']:.5f}")
 
             ts_dates = pd.to_datetime([c.replace("d_", "") for c in date_cols])
             ts_vals = row[date_cols].to_numpy(dtype=float)
