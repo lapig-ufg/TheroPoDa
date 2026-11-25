@@ -6,6 +6,7 @@ import html
 import json
 import os
 import re
+import shutil
 import signal
 import sqlite3
 import subprocess
@@ -113,6 +114,51 @@ def _load_runner_state() -> Optional[Dict]:
         return None
 
 
+def _stop_process_tree(proc, pid: Optional[int]) -> None:
+    """Terminate the runner process and all child worker processes."""
+    target_pid = proc.pid if proc is not None else pid
+    if not target_pid:
+        return
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(int(target_pid))], capture_output=True)
+        else:
+            os.killpg(int(target_pid), signal.SIGTERM)
+    except OSError:
+        if proc is not None:
+            try:
+                proc.terminate()
+            except OSError:
+                pass
+
+
+def _clean_generated_files(output_dir: str, output_name: str) -> int:
+    """Remove generated .db, .parquet, .pq, .txt, and .log files for output_name."""
+    base = os.path.join(normalize_path(output_dir) if output_dir.strip() else os.getcwd(), output_name.strip())
+    targets = [
+        f"{base}.db",
+        f"{base}.db-shm",
+        f"{base}.db-wal",
+        f"{base}_polygonList.txt",
+        f"{base}_errors_polygon.txt",
+        f"{base}_empty_polygon.txt",
+        f"{base}_trend_analysis.parquet",
+        f"{base}_trend_analysis.pq",
+        f"{base}_run.log",
+    ]
+    removed = 0
+    for path in targets:
+        if os.path.isdir(path):
+            shutil.rmtree(path, ignore_errors=True)
+            removed += 1
+        elif os.path.exists(path):
+            os.remove(path)
+            removed += 1
+    if os.path.exists(_RUNNER_STATE_FILE):
+        os.remove(_RUNNER_STATE_FILE)
+    return removed
+
+
 def _render_runner_tab(default_dir: str) -> None:
     """Render the pipeline parameter form and background log monitor."""
     st.subheader("Configurar e Executar Extração + Análise de Tendência")
@@ -216,7 +262,12 @@ def _render_runner_tab(default_dir: str) -> None:
         log_file = open(log_path, "w", encoding="utf-8", buffering=1)
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
-        proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT, env=env)
+        popen_kwargs = {"stdout": log_file, "stderr": subprocess.STDOUT, "env": env}
+        if os.name == "nt":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            popen_kwargs["start_new_session"] = True
+        proc = subprocess.Popen(cmd, **popen_kwargs)
 
         st.session_state["runner_pid"] = proc.pid
         st.session_state["runner_proc"] = proc
@@ -230,6 +281,19 @@ def _render_runner_tab(default_dir: str) -> None:
         st.session_state["thera_gonna_sleep_until"] = 0.0
         _save_runner_state({"pid": proc.pid, "log_path": log_path, "cmd": " ".join(cmd)})
         st.success(f"Processamento iniciado (PID {proc.pid}). Log: `{log_path}`")
+        st.rerun()
+
+    ctrl_col1, ctrl_col2 = st.columns(2)
+    if ctrl_col1.button("⏹️ Parar Processamento", use_container_width=True):
+        _stop_process_tree(st.session_state.get("runner_proc"), st.session_state.get("runner_pid"))
+        st.warning("Sinal de interrupção enviado para o processo e seus workers.")
+        st.rerun()
+    if ctrl_col2.button("🗑️ Limpar Arquivos Gerados", use_container_width=True):
+        removed = _clean_generated_files(output_folder, output_name)
+        for key in ("runner_proc", "runner_pid", "runner_log", "runner_cmd"):
+            st.session_state.pop(key, None)
+        st.cache_data.clear()
+        st.success(f"{removed} arquivo(s)/pasta(s) de `{output_name}` removidos.")
         st.rerun()
 
     _render_live_log()
@@ -262,13 +326,8 @@ def _render_live_log() -> None:
     if running:
         col_s1.info(f"⏳ Em execução — atualizando log automaticamente a cada 2s (PID {pid})")
         if col_s2.button("⏹️ Interromper"):
-            if proc is not None:
-                proc.terminate()
-            elif pid:
-                try:
-                    os.kill(int(pid), signal.SIGTERM)
-                except OSError:
-                    pass
+            _stop_process_tree(proc, pid)
+            st.rerun()
     elif status_code == 0:
         if not st.session_state.get("runner_cache_cleared"):
             st.cache_data.clear()
