@@ -177,6 +177,12 @@ python3 main.py --help
 
 ## Changelog
 
+### v3.1.1 (2026-11)
+- **Observed-Span Gap-Filling & Trend Analysis (`theropoda/trends.py`, `dashboard.py`):** Restricted `SeasConvFill` gap-filling, `STL`, and `OLS` strictly to each polygon's observed date span (`[first_valid : last_valid + 1]`), preventing synthetic extrapolation into years before or after real observations.
+- **OLS Intercept Metrics in Dashboard (`dashboard.py`):** Added mean `intercept_m` KPI, `intercept_m`/`intercept_pv` scatter hover details, and per-polygon `intercept_m`, `intercept_sd`, `intercept_tv`, and `intercept_pv` cards in the time series tab.
+- **Adaptive GEE Rate-Limit & Concurrency Control (`theropoda/extractor.py`):** Added exponential backoff on GEE HTTP 429 / concurrency errors and automatic worker halving (e.g., `12 → 6 → 3 → 1`) when restricted-mode throttling occurs.
+- **Dashboard Process Control & Cleanup (`dashboard.py`):** Added a process-tree Stop button to interrupt running pipelines cleanly, a button to remove generated output/log files, and updated deprecated `st.components.v1.html`/`use_container_width` calls to `st.iframe` and `width="stretch"`.
+
 ### v3.1.0 (2026-11)
 - **Spectral Index Presets & Multi-Index Extraction (`theropoda/indices.py`):** Added 9 index presets (`NDVI`, `EVI`, `SAVI`, `NDMI`, `NDWI`, `NBR`, `BSI`, `GNDVI`, and Sentinel-2 `PSRI`) via `-i` / `--indices`, applying Sentinel-2 reflectance scaling (`* 0.0001`) and Landsat C02 L2 scaling (`* 0.0000275 - 0.2`) before computing indices.
 - **Multi-Index Trend Analysis & Dashboard:** Multiple selected indices are stored together in SQLite (`<IDX>_median`), decomposed independently in `theropoda/trends.py` (with `index_name` partitioning), and selectable in `dashboard.py` and `gui.py`.

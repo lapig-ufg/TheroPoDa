@@ -8,7 +8,7 @@
 
 - **Author:** Vinícius Vieira Mesquita (`vinicius.mesquita@ufg.br`) — LAPIG / UFG
 - **Co-author:** Leandro Leal Parente (`leal.parente@gmail.com`)
-- **Version:** `3.0.0` | **License:** MIT
+- **Version:** `3.1.1` | **License:** MIT
 
 ---
 
