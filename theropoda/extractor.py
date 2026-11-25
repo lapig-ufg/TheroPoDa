@@ -4,6 +4,7 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing
 import os
+import random
 import sqlite3
 import time
 from typing import Any, Dict, Optional, Sequence
@@ -311,6 +312,30 @@ def _run_extract_with_timeout(timeout_seconds: int, kwargs: dict):
     return val1, val2
 
 
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """Detect Earth Engine concurrency/quota throttling errors."""
+    msg = str(exc).lower()
+    return any(tok in msg for tok in ("too many requests", "concurrency limit", "429", "quota"))
+
+
+def _run_with_rate_limit_backoff(timeout_seconds: int, kwargs: dict, delays=(10, 25, 60)):
+    """Run extraction with exponential backoff on GEE 429 concurrency errors."""
+    for attempt, delay in enumerate((0, *delays)):
+        if delay > 0:
+            jitter = random.uniform(0.5, 3.0)
+            logger.warning(
+                f"Index {kwargs.get('index')} - Object [{kwargs.get('obj')}] hit GEE concurrency limit "
+                f"(attempt {attempt}/{len(delays)}). Waiting {delay + jitter:.1f}s before retrying..."
+            )
+            time.sleep(delay + jitter)
+        try:
+            return _run_extract_with_timeout(timeout_seconds, kwargs)
+        except Exception as exc:
+            if _is_rate_limit_error(exc) and attempt < len(delays):
+                continue
+            raise
+
+
 def build_time_series_check(
     index: int,
     obj,
@@ -327,7 +352,7 @@ def build_time_series_check(
     timeout_seconds: int = 600,
     indices: Sequence[str] = ("NDVI",),
 ):
-    """Check if polygon was already processed and run extraction with timeout + bestEffort fallback."""
+    """Check if polygon was already processed and run extraction with backoff, timeout, and bestEffort fallback."""
     obj = _parse_poly_id(obj)
     db_file = outfile + ".db"
 
@@ -357,7 +382,7 @@ def build_time_series_check(
     )
 
     try:
-        status, elapsed = _run_extract_with_timeout(timeout_seconds, {**base_kwargs, "bestEffort": False})
+        status, elapsed = _run_with_rate_limit_backoff(timeout_seconds, {**base_kwargs, "bestEffort": False})
         if status == "empty":
             logger.warning(f"Index {index} - Object [{obj}] has no valid pixels after mask/date filter. Skipping.")
             return {"errors": None, "empty": obj, "time": None}
@@ -367,7 +392,7 @@ def build_time_series_check(
     except Exception as exc:
         logger.warning(f"Index {index} - Request [{obj}] failed ({exc}). Trying bestEffort=True (30m)!")
         try:
-            status, elapsed = _run_extract_with_timeout(timeout_seconds, {**base_kwargs, "bestEffort": True})
+            status, elapsed = _run_with_rate_limit_backoff(timeout_seconds, {**base_kwargs, "bestEffort": True})
             if status == "empty":
                 logger.warning(f"Index {index} - Object [{obj}] empty even with bestEffort. Skipping.")
                 return {"errors": None, "empty": obj, "time": None}
