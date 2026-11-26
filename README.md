@@ -328,3 +328,5 @@ Licensed under the [MIT License](./LICENSE). If you use **TheroPoDa+** in scient
 
 - **Vinícius Vieira Mesquita** — LAPIG / UFG (`vinicius.mesquita@ufg.br`)
 - **Leandro Leal Parente** — OpenGeoHub (`leandro.parente@opengeohub.org`)
+
+> **AI-Assisted Engineering:** The `v3.x` architecture, multi-index pipeline, interactive dashboard, documentation, and reliability enhancements were developed and refined with the assistance of **Antigravity** (Google DeepMind / Gemini), under the scientific direction and review of the authors.

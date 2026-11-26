@@ -8,6 +8,7 @@
 
 - **Author:** Vinícius Vieira Mesquita (`vinicius.mesquita@ufg.br`) — LAPIG / UFG
 - **Co-author:** Leandro Leal Parente (`leandro.parente@opengeohub.org`) — OpenGeoHub
+- **AI-Assisted Engineering:** `v3.x` architecture, enhancements, and documentation assisted by **Antigravity** (Google DeepMind / Gemini)
 - **Version:** `3.1.1` | **License:** MIT
 
 ---
